@@ -7,8 +7,8 @@ int main(int   argc,char *argv[])
 {
     int** u;
 
-    TER::Instance *g = new TER::Instance(12, u);
-    TER::clean("abilene");
+    Instance *g = new Instance(12, u);
+    clean("../instances/abilene.txt");
     std::cout << g->nbNodes << std::endl;
 
 }

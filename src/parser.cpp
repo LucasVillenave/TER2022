@@ -3,20 +3,20 @@
 #include <sstream>
 #include <fstream>
 
-namespace TER{
-    std::vector<std::string> split(std::string s, char delim) {
-        std::vector<std::string> words;
-        std::stringstream ss(s);
-        std::string word;
-        while (std::getline(ss, word, delim)) {
-            words.push_back(word);
-        }
-        return words;
+
+std::vector<std::string> split(std::string s, char delim) {
+    std::vector<std::string> words;
+    std::stringstream ss(s);
+    std::string word;
+    while (std::getline(ss, word, delim)) {
+        words.push_back(word);
     }
+    return words;
 }
 
 
-void TER::clean(std::string path){
+
+void clean(std::string path){
     std::string line;
     std::fstream f;
     std::vector<std::string> words;
@@ -30,7 +30,7 @@ void TER::clean(std::string path){
     std::string keyword = "NODES";
     while(switchos == 0){
         std::getline(f,line);
-        words = TER::split(line,' ');
+        words = split(line,' ');
 
         if (words[0] == keyword){
             switchos = 1;
@@ -39,5 +39,4 @@ void TER::clean(std::string path){
     while(switchos == 1){
 
     }
-
 }
