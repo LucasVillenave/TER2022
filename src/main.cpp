@@ -9,4 +9,5 @@ int main(int   argc,char *argv[])
   Instance testInstance = Instance(3,matrixos);
   testInstance.print();
 
+  clean("../instances/abilene.txt");
 }
