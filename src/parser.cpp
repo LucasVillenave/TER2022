@@ -1,15 +1,16 @@
 #include "parser.hpp"
+#include "Instance.hpp"
 #include <vector>
 #include <sstream>
 #include <fstream>
 #include <algorithm>
+using namespace std;
 
-
-std::vector<std::string> split(std::string s, char delim) {
-    std::vector<std::string> words;
-    std::stringstream ss(s);
-    std::string word;
-    while (std::getline(ss, word, delim)) {
+vector<string> split(string s, char delim) {
+    vector<string> words;
+    stringstream ss(s);
+    string word;
+    while (getline(ss, word, delim)) {
         if (word!=""){
             words.push_back(word);
         }
@@ -17,15 +18,96 @@ std::vector<std::string> split(std::string s, char delim) {
     return words;
 }
 
-void write(int nbNodes, int nbEdges, int nbDemands, int** edges, std::vector<int> demands, std::vector<int> demandsEnd, std::vector<int> demandsStart, std::string fileName){
+Instance load(std::string path){
+    string prefixe = "../instances/cleaned";
+    path = prefixe + path;
+    
+    string line;
+    fstream f;
+    vector<string> words;
+    
+    int nbNodes;
+    int nbEdges;
+    int nbDemands;
+    std::vector<std::vector<int>> adjencyMatrix;
+    std::vector<int> demandsEnd;
+    std::vector<int> demandsStart;
+    std::vector<int> demands;
+
+    f.open(path);
+    if (!f){
+        cout<<"\ncouldn't load\n"<<endl;
+    }else{
+        cout<<"\nsuccessful load\n"<<endl;
+    }
+
+    getline(f,line);
+    words = split(line,' ');
+    nbNodes = stoi(words.at(0));
+    nbEdges = stoi(words.at(1));
+    nbDemands = stoi(words.at(2));
+    getline(f,line);
+
+    cout << "could get that n = " << nbNodes << ", m = " << nbEdges << ", and nD = " << nbDemands << endl;
+
+    for (int i=0;i<nbNodes;i++){
+        std::vector<int> tmp;
+        for (int j=0;j<nbNodes;j++){
+            tmp.push_back(-1);
+        }
+        adjencyMatrix.push_back(tmp);
+    }
+
+
+    for (int i=0; i<(nbEdges*2);i++){
+        getline(f,line);
+        words = split(line,' ');
+        adjencyMatrix.at(stoi(words.at(0))).at(stoi(words.at(1))) = 1;
+    }
+ 
+    getline(f,line);
+
+    for (int i=0; i<nbDemands;i++){
+        getline(f,line);
+        words = split(line,' ');
+        demands.push_back(stoi(words.at(2)));
+        demandsStart.push_back(stoi(words.at(0)));
+        demandsEnd.push_back(stoi(words.at(1)));
+    }
+
+    Instance* i = new Instance(nbNodes,adjencyMatrix,0,0,0,nbDemands,demandsStart,demandsEnd,demands,0,0);
+    return *i;
 
 }
 
-void clean(std::string path){
+void Gwrite(int nbNodes, int nbEdges, int nbDemands, int** edges, vector<int> demands, vector<int> demandsEnd, vector<int> demandsStart, string fileName){
+    string prefixe = "../instances/";
+    ofstream f(prefixe + fileName);
+    if (!f){
+        string s = "couldn't create file : ";
+    }
+    string separator = " ";
+    f << nbNodes << separator << nbEdges << separator << nbDemands << endl << endl;
+    for (int i=0;i<nbNodes;i++){
+        for (int j=0;j<nbNodes;j++){
+            int e = edges[i][j];
+            if (e!=-1){
+                f << i << separator << j << endl;
+            }
+        }
+    }
+    f<<endl;
+    for (int i=0;i<nbDemands;i++){
+        f << demandsStart.at(i) << separator << demandsEnd.at(i) << separator << demands.at(i) << endl;
+    }
+    f.close();
+}
+
+void clean(string path){
     int nbDemands = 0;
-    std::vector<int> demandsStart;
-    std::vector<int> demandsEnd;
-    std::vector<int> demands;
+    vector<int> demandsStart;
+    vector<int> demandsEnd;
+    vector<int> demands;
 
     int** edges;
     int nbEdges = 0;
@@ -33,30 +115,31 @@ void clean(std::string path){
     int nbNodes = 0;
 
 
-    std::vector<std::string> nodesNames;
-    std::vector<std::string>::iterator itr;
+    vector<string> nodesNames;
+    vector<string>::iterator itr;
     int src;
     int dst;  
 
-    std::string line;
-    std::fstream f;
-    std::vector<std::string> words;
+    string line;
+    fstream f;
+    vector<string> words;
     
     
 
 
     int switchos = 0;
-    f.open(path);
+    string prefixe = "../instances/";
+    f.open(prefixe + path);
     if (!f){
-        std::cout<<"\ncouldn't load\n"<<std::endl;
+        cout<<"\ncouldn't load\n"<<endl;
     }else{
-        std::cout<<"\nsuccessful load\n"<<std::endl;
+        cout<<"\nsuccessful load\n"<<endl;
     }
 
     //looking for nodes
-    std::string keyword = "NODES";
+    string keyword = "NODES";
     while(switchos == 0){
-        std::getline(f,line);
+        getline(f,line);
         words = split(line,' ');
 
         if (!words.empty()){
@@ -67,7 +150,7 @@ void clean(std::string path){
     }
     keyword = ")";
     while(switchos == 1){
-        std::getline(f,line);
+        getline(f,line);
         words = split(line,' ');
 
         if (!words.empty()){
@@ -92,7 +175,7 @@ void clean(std::string path){
     //looking for edges
     keyword = "LINKS";
     while(switchos == 0){
-        std::getline(f,line);
+        getline(f,line);
         words = split(line,' ');
 
         if (!words.empty()){
@@ -103,7 +186,7 @@ void clean(std::string path){
     }
     keyword = ")";
     while(switchos == 1){
-        std::getline(f,line);
+        getline(f,line);
         words = split(line,' ');
 
         if (!words.empty()){
@@ -112,14 +195,14 @@ void clean(std::string path){
             }else{
                 ++nbEdges;
 
-                itr = std::find(nodesNames.begin(),nodesNames.end(),words[2]);
-                src = std::distance(nodesNames.begin(),itr);
+                itr = find(nodesNames.begin(),nodesNames.end(),words[2]);
+                src = distance(nodesNames.begin(),itr);
                 
-                itr = std::find(nodesNames.begin(),nodesNames.end(),words[3]);
-                dst = std::distance(nodesNames.begin(),itr);
+                itr = find(nodesNames.begin(),nodesNames.end(),words[3]);
+                dst = distance(nodesNames.begin(),itr);
 
-                edges[src][dst] = std::stoi(words[5]);
-                edges[dst][src] = std::stoi(words[5]);
+                edges[src][dst] = stoi(words[5]);
+                edges[dst][src] = stoi(words[5]);
             }
         }
     }
@@ -127,7 +210,7 @@ void clean(std::string path){
     //looking for demands
     keyword = "DEMANDS";
     while(switchos == 0){
-        std::getline(f,line);
+        getline(f,line);
         words = split(line,' ');
 
         if (!words.empty()){
@@ -138,7 +221,7 @@ void clean(std::string path){
     }
     keyword = ")";
     while(switchos == 1){
-        std::getline(f,line);
+        getline(f,line);
         words = split(line,' ');
 
         if (!words.empty()){
@@ -147,16 +230,18 @@ void clean(std::string path){
             }else{
                 ++nbDemands;
 
-                itr = std::find(nodesNames.begin(),nodesNames.end(),words[2]);
-                demandsStart.push_back(std::distance(nodesNames.begin(),itr));
+                itr = find(nodesNames.begin(),nodesNames.end(),words[2]);
+                demandsStart.push_back(distance(nodesNames.begin(),itr));
                 
-                itr = std::find(nodesNames.begin(),nodesNames.end(),words[3]);
-                demandsEnd.push_back(std::distance(nodesNames.begin(),itr));
+                itr = find(nodesNames.begin(),nodesNames.end(),words[3]);
+                demandsEnd.push_back(distance(nodesNames.begin(),itr));
                 
-                demands.push_back(std::stoi(words[6]));
+                demands.push_back(stoi(words[6]));
             }
         }
     }
 
-    write(nbNodes, nbEdges, nbDemands, edges, demands, demandsEnd, demandsStart, path);
+    string c = "cleaned";
+    path = c + path;
+    Gwrite(nbNodes, nbEdges, nbDemands, edges, demands, demandsEnd, demandsStart, path);
 }

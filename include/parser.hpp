@@ -3,6 +3,7 @@
 
 #include "Instance.hpp"
 #include <string>
+#include <vector>
 
 
 
@@ -13,6 +14,6 @@ Instance load(std::string path);
 void clean(std::string path);
 
 //cleaned version of instances will be named cleanedINSTANCE_NAME.txt
-
+void Gwrite(int nbNodes, int nbEdges, int nbDemands, int** edges, std::vector<int> demands, std::vector<int> demandsEnd, std::vector<int> demandsStart, std::string fileName);
 
 #endif
