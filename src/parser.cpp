@@ -18,8 +18,25 @@ vector<string> split(string s, char delim) {
     return words;
 }
 
+vector<int> generateVNF(int n, vector<int> demands){
+    vector<int> vnf;
+    int hvnf = 0;
+    for (int i=0;i<demands.size();i++){
+        hvnf += demands[i];
+    }
+    
+    int lvnf = (2*hvnf/n) + 1; //good enought
+    int mvnf = ((lvnf+hvnf)/2);
+    
+    vnf.push_back(lvnf);
+    vnf.push_back(mvnf);
+    vnf.push_back(hvnf);
+
+    return vnf;
+}
+
 Instance load(std::string path){
-    string prefixe = "../instances/cleaned";
+    string prefixe = "../instances/cleaned/C";
     path = prefixe + path;
     
     string line;
@@ -34,6 +51,7 @@ Instance load(std::string path){
     std::vector<int> demandsStart;
     std::vector<int> demands;
 
+    cout << "trying to load : " << path << endl;
     f.open(path);
     if (!f){
         cout<<"\ncouldn't load\n"<<endl;
@@ -59,12 +77,13 @@ Instance load(std::string path){
     }
 
 
-    for (int i=0; i<(nbEdges*2);i++){
+    for (int i=0; i<(nbEdges);i++){
+        //cout << stoi(words.at(0)) << " " << stoi(words.at(1)) << " at " << i << " on " << nbEdges << endl;
         getline(f,line);
         words = split(line,' ');
         adjencyMatrix.at(stoi(words.at(0))).at(stoi(words.at(1))) = 1;
     }
- 
+
     getline(f,line);
 
     for (int i=0; i<nbDemands;i++){
@@ -81,13 +100,19 @@ Instance load(std::string path){
 }
 
 void Gwrite(int nbNodes, int nbEdges, int nbDemands, int** edges, vector<int> demands, vector<int> demandsEnd, vector<int> demandsStart, string fileName){
+
     string prefixe = "../instances/";
-    ofstream f(prefixe + fileName);
+    string cl = "cleaned/";
+    cout << "trying to write at : " << prefixe + cl + fileName << endl;
+    ofstream f(prefixe + cl + fileName);
     if (!f){
         string s = "couldn't create file : ";
     }
     string separator = " ";
-    f << nbNodes << separator << nbEdges << separator << nbDemands << endl << endl;
+
+    vector<int> vnf = generateVNF(nbNodes,demands);
+
+    f << nbNodes << separator << nbEdges << separator << nbDemands << separator << vnf[0] << separator << vnf[1] << separator << vnf[2] << endl << endl;
     for (int i=0;i<nbNodes;i++){
         for (int j=0;j<nbNodes;j++){
             int e = edges[i][j];
@@ -124,12 +149,11 @@ void clean(string path){
     fstream f;
     vector<string> words;
     
-    
-
-
     int switchos = 0;
     string prefixe = "../instances/";
-    f.open(prefixe + path);
+    string raw = "raw/";
+    cout << "trying to load : " << prefixe << raw << path << endl;
+    f.open(prefixe + raw + path);
     if (!f){
         cout<<"\ncouldn't load\n"<<endl;
     }else{
@@ -157,7 +181,7 @@ void clean(string path){
             if (words[0] == keyword){
                 switchos = 0;
             }else{
-                ++nbNodes;
+                nbNodes++;
                 nodesNames.push_back(words[0]);
             }
         }
@@ -202,7 +226,6 @@ void clean(string path){
                 dst = distance(nodesNames.begin(),itr);
 
                 edges[src][dst] = stoi(words[5]);
-                edges[dst][src] = stoi(words[5]);
             }
         }
     }
@@ -241,7 +264,7 @@ void clean(string path){
         }
     }
 
-    string c = "cleaned";
+    string c = "C";
     path = c + path;
     Gwrite(nbNodes, nbEdges, nbDemands, edges, demands, demandsEnd, demandsStart, path);
 }
