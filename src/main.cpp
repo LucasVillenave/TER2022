@@ -47,12 +47,26 @@ int main(int   argc,char *argv[])
 
   std::string file = "atlanta.txt";
 
-  std::cout << std::endl <<"my fking problem" << std::endl<< std::endl;
   clean(file);
-  std::cout << std::endl <<"nearly not my fking problem" << std::endl<< std::endl;
   Instance i = load(file);
-  std::cout << std::endl <<"not my fking problem" << std::endl<< std::endl;
   i.print();
+  std::printf("%d",i.arcCapacity);
+  i.addA();
+  i.print();
+  Solution* sol = i.getTrivialSolution();
+  sol->print();
+  std::cout << i.nbNodes;
+  int n = i.nbNodes;
+  int m = i.nbDemands;
+  for (int i=0;i<n+1;i++){
+    for (int j=0;j<n+1;j++){
+      for (int k=0;k<m;k++){
+        if(sol->useEdgeForDemandStart[i][j][k]){
+          std::cout << "edge " << i << " to " << j << " used on demand " << k << " for demand start" << std::endl;
+        }
+      }
+    }
+  }
   std::cout << "\n";
 
 

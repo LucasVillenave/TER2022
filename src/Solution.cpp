@@ -14,14 +14,14 @@ int Solution::getValue()
 
 
 Solution::Solution(std::vector<bool>  openVNF,std::vector<std::vector<bool>>  useVNFforDemand,
-                   std::vector<std::vector<std::vector<bool>>>  useEdeForDemandStart,
-                   std::vector<std::vector<std::vector<bool>>>  useEdeForDemandEnd)
+                   std::vector<std::vector<std::vector<bool>>>  useEdgeForDemandStart,
+                   std::vector<std::vector<std::vector<bool>>>  useEdgeForDemandEnd)
 {
   this->openVNF=openVNF;
   this->useVNFforDemand=useVNFforDemand;
 
-  this->useEdeForDemandStart=useEdeForDemandStart;
-  this->useEdeForDemandEnd=useEdeForDemandEnd;
+  this->useEdgeForDemandStart=useEdgeForDemandStart;
+  this->useEdgeForDemandEnd=useEdgeForDemandEnd;
 
   this->solvingTime=-1.0;
 }

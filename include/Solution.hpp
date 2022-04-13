@@ -10,14 +10,14 @@ class Solution{
     std::vector<bool> openVNF;
     std::vector<std::vector<bool>> useVNFforDemand;
 
-    std::vector<std::vector<std::vector<bool>>> useEdeForDemandStart;
-    std::vector<std::vector<std::vector<bool>>> useEdeForDemandEnd;
+    std::vector<std::vector<std::vector<bool>>> useEdgeForDemandStart;
+    std::vector<std::vector<std::vector<bool>>> useEdgeForDemandEnd;
 
     float solvingTime;
 
     Solution(std::vector<bool>  openVNF,std::vector<std::vector<bool>>  useVNFforDemand,
-                       std::vector<std::vector<std::vector<bool>>>  useEdeForDemandStart,
-                       std::vector<std::vector<std::vector<bool>>>  useEdeForDemandEnd);
+                       std::vector<std::vector<std::vector<bool>>>  useEdgeForDemandStart,
+                       std::vector<std::vector<std::vector<bool>>>  useEdgeForDemandEnd);
     void print();
     void save();
     int getValue();

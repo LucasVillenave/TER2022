@@ -1,5 +1,6 @@
 #include "parser.hpp"
 #include "Instance.hpp"
+#include "modelSolving.hpp"
 #include <vector>
 #include <sstream>
 #include <fstream>
@@ -71,7 +72,7 @@ Instance load(std::string path){
     for (int i=0;i<nbNodes;i++){
         std::vector<int> tmp;
         for (int j=0;j<nbNodes;j++){
-            tmp.push_back(-1);
+            tmp.push_back(0);
         }
         adjencyMatrix.push_back(tmp);
     }
@@ -95,6 +96,7 @@ Instance load(std::string path){
     }
 
     Instance* i = new Instance(nbNodes,adjencyMatrix,0,0,0,nbDemands,demandsStart,demandsEnd,demands,0,0);
+    i = new Instance(nbNodes,adjencyMatrix,0,0,0,nbDemands,demandsStart,demandsEnd,demands,arcCapacity(i),0);
     return *i;
 
 }
@@ -112,7 +114,8 @@ void Gwrite(int nbNodes, int nbEdges, int nbDemands, int** edges, vector<int> de
 
     vector<int> vnf = generateVNF(nbNodes,demands);
 
-    f << nbNodes << separator << nbEdges << separator << nbDemands << separator << vnf[0] << separator << vnf[1] << separator << vnf[2] << endl << endl;
+    f << nbNodes << separator << nbEdges << separator << nbDemands << separator << vnf[0] << separator << vnf[1] << separator << vnf[2] << separator << vnf[2] << endl << endl;
+
     for (int i=0;i<nbNodes;i++){
         for (int j=0;j<nbNodes;j++){
             int e = edges[i][j];
@@ -121,6 +124,7 @@ void Gwrite(int nbNodes, int nbEdges, int nbDemands, int** edges, vector<int> de
             }
         }
     }
+
     f<<endl;
     for (int i=0;i<nbDemands;i++){
         f << demandsStart.at(i) << separator << demandsEnd.at(i) << separator << demands.at(i) << endl;
