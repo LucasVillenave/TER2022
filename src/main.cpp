@@ -1,6 +1,5 @@
 #include "Instance.hpp"
 #include "parser.hpp"
-#include "Solution.hpp"
 #include <iostream>
 #include <vector>
 
@@ -54,19 +53,7 @@ int main(int   argc,char *argv[])
   i.addA();
   i.print();
   Solution* sol = i.getTrivialSolution();
-  sol->print();
-  std::cout << i.nbNodes;
-  int n = i.nbNodes;
-  int m = i.nbDemands;
-  for (int i=0;i<n+1;i++){
-    for (int j=0;j<n+1;j++){
-      for (int k=0;k<m;k++){
-        if(sol->useEdgeForDemandStart[i][j][k]){
-          std::cout << "edge " << i << " to " << j << " used on demand " << k << " for demand start" << std::endl;
-        }
-      }
-    }
-  }
+  sol->print(true);
   std::cout << "\n";
 
 

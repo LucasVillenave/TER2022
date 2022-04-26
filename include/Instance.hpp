@@ -95,12 +95,12 @@ class Instance{
            }
          }
          if (s==0){
-           adjacencyMatrix[i].push_back(-1);
-           a.push_back(-1);
+           adjacencyMatrix[i].push_back(0);
+           a.push_back(0);
          }
          s=0;
        }
-       a.push_back(-1);
+       a.push_back(0);
        this->adjacencyMatrix.push_back(a);
        this->hasA = 1;
      }
@@ -112,6 +112,8 @@ class Instance{
        std::vector<std::vector<bool>>  useVNFforDemand;
        std::vector<std::vector<std::vector<bool>>>  useEdgeForDemandStart;
        std::vector<std::vector<std::vector<bool>>>  useEdgeForDemandEnd;
+
+      std::cout << " here we have " << nbNodes << " nodes " << std::endl;
 
        for (int i=0 ; i<nbNodes; i++){
          std::vector<bool> tmp1;
@@ -134,7 +136,7 @@ class Instance{
          std::vector<bool> tmptmp3;
 
          for (int k=0; k<nbDemands; k++){
-          tmptmp2.push_back(demandsEnd[k]==i);
+          tmptmp2.push_back(demandsStart[k]==i);
           tmptmp3.push_back(false);
           tmp1.push_back(false);
          }
@@ -152,7 +154,7 @@ class Instance{
        std::vector<std::vector<bool>> tmp2;
        std::vector<std::vector<bool>> tmp3;
 
-       for (int i=0; i<nbNodes; i++){
+       for (int i=0; i<nbNodes+1; i++){
          std::vector<bool> tmptmp3;
          std::vector<bool> tmptmp2;
 
