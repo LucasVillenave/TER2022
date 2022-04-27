@@ -2,12 +2,13 @@
 #include "parser.hpp"
 #include <iostream>
 #include <vector>
+#include "ilconcert/iloenv.h"
 
 
 int main(int   argc,char *argv[])
 {
 
-
+  IloEnv env;
   // std::vector<std::vector<int>> matrixos = {{0,1,0},{1,0,1},{0,1,0}};
   // std::vector<int> demandsStart = {0,0};
   // std::vector<int> demandsEnd = {1,2};
