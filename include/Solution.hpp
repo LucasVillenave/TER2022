@@ -21,7 +21,6 @@ class Solution{
     void print(bool verbose=false);
     void save();
     int getValue();
-    bool check(bool verbose);
 };
 
 #endif

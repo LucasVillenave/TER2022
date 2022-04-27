@@ -34,7 +34,7 @@ void Solution::print(bool verbose)
   {
     if(openVNF[nodeIndex])
     {
-      std::cout << "VNF opened on node " << openVNF.size() << ":\n";
+      std::cout << "VNF opened on node " << nodeIndex << ":\n";
 
       for(int demandIndex=0;demandIndex<useVNFforDemand[0].size();demandIndex++)
       {
@@ -46,11 +46,11 @@ void Solution::print(bool verbose)
     }
   }
   if (verbose == true){
-    int n = openVNF.size();
-    int m = useEdgeForDemandStart[0][0].size();
-    for (int i=0;i<n;i++){
-      for (int j=0;j<n;j++){
-        for (int k=0;k<m;k++){
+    int nNodes = openVNF.size();
+    int nDemand = useEdgeForDemandStart[0][0].size();
+    for (int i=0;i<nNodes;i++){
+      for (int j=0;j<nNodes;j++){
+        for (int k=0;k<nDemand;k++){
           if(useEdgeForDemandStart[i][j][k]){
             std::cout << "edge " << i << " to " << j << " used on demand " << k << " for demand start" << std::endl;
           }
