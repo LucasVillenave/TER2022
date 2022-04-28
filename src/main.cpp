@@ -20,7 +20,7 @@ int main(int   argc,char *argv[])
   iA.print();
   Solution* sol = iA.getTrivialSolution();
   sol->print(true);
-  std::cout << iA.check(sol) << std::endl;
+  std::cout << iA.check(sol,iA.highVNFCapacity) << std::endl;
   std::cout << "\n";
 
 

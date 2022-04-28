@@ -54,9 +54,11 @@ class Instance{
 
     Solution* getTrivialSolution();
 
-    int check(Solution* sol);
+    int check(Solution* sol, int VNFCapacity);
 
     int flowCheck(Solution* sol);
+
+    int capacityCheck(Solution* sol,int VNFCapacity);
 };
 
 
