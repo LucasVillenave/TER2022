@@ -88,30 +88,30 @@ Solution* kOptL(Solution* sol,Instance* instance){
 
         cout<<"--> Creating constraints"<<endl;
 
-        cout<<"--> Constraint : affect each demand to VNF"<<endl;
+        cout<<"--> Constraint : affect each demand to VNF (16)"<<endl;
 
         for (int k=0;k<m;k++){
             GRBLinExpr aVNF = 0;
             for (int i=0;i<n;i++){
                 aVNF += z[i][k];
             }
-            name << "affectation of demand " << k;
+            name << "affectation_of_demand" << k;
             model.addConstr(aVNF==1,name.str());
             name.str("");
         }
 
-        cout<<"--> Constraint : redundancy of y/z"<<endl;
+        cout<<"--> Constraint : redundancy of y/z (3)"<<endl;
 
         for (int k=0;k<m;k++){
             for (int i=0;i<n;i++){
                 GRBLinExpr redundancy = y[i] - z[i][k];
-                name << "z[" << i << "][" << k << "] <= y[" << i << "]";
+                name << "z[" << i << "][" << k << "]_<=_y[" << i << "]";
                 model.addConstr(redundancy<=0,name.str());
                 name.str("");
             }
         }
 
-        cout<<"--> Constraint : arc capacity"<<endl;
+        cout<<"--> Constraint : arc capacity (4)"<<endl;
 
         for (int j=0;j<n;j++){
             for (int i=0;i<n;i++){
@@ -119,11 +119,41 @@ Solution* kOptL(Solution* sol,Instance* instance){
                 for (int k=0; k<m;k++){
                     capacityCtr += x1[i][j][k] + x2[i][j][k];
                 }
-                name << "capacity on arc : " << i << " " << j;
+                name << "capacity_on_arc_" << i << "_" << j;
                 model.addConstr(capacityCtr <= arcCapacity ,name.str());
                 name.str("");
             }
         }
+
+        cout<<"--> Constraint : flow 1 conservation (17.1)"<<endl;
+
+        for (int k=0;k<m;k++){          
+            GRBLinExpr flow1 = 0;
+            int i = instance->demandsStart[k];
+            for (int j=0; j<n;j++){
+                flow1 += x1[i][j][k] - x1[j][i][k] + z[i][k];
+            }
+            name << "flow_conservation_of_demand_" << k << "_on_" << i << "_wich_is_demandStart";
+            model.addConstr(flow1 == 0 ,name.str());
+            name.str("");
+        }
+
+        // cout<<"--> Constraint : flow 1 conservation (17.2)"<<endl;
+
+        // for (int k=0;k<m;k++){
+        //     for (int i=0;i<n;i++){
+        //         if (instance->demandsStart[k]!=i){          
+        //             GRBLinExpr flow1 = 0;
+        //             for (int j=0; j<n;j++){
+        //                 flow1 += x1[i][j][k] - x1[j][i][k] + z[i][k];
+        //             }
+        //             name << "flow_conservation_of_demand_" << k << "_on_" << i;
+        //             model.addConstr(flow1 == 0 ,name.str());
+        //             name.str("");
+        //         } 
+        //     } 
+        // }
+        // rend model infaisable !
 
         cout<<"--> setting model"<<endl;
         model.set(GRB_DoubleParam_TimeLimit, 600.0);
@@ -141,6 +171,14 @@ Solution* kOptL(Solution* sol,Instance* instance){
 			cout<<"--> Printing results "<<endl;
 			model.write("solution.sol");
 			cout << "Objective value = "<< model.get(GRB_DoubleAttr_ObjVal)  << endl;
+
+            for (int k=0;k<m;k++){
+                for (int i=0;i<n;i++){
+                    if(z[i][k].get(GRB_DoubleAttr_X)>0){
+                        cout << "z["<<i<<"][" << k << "] is used"<< endl;
+                    }
+                }
+            }
 
             // for(int i=0;i<n;i++){
             //     for(int j=0;j<n;j++){
