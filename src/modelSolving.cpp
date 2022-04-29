@@ -15,7 +15,7 @@ int arcCapacity(Instance* i){
     return s;
 }
 
-Solution* kOptL(Solution* sol,Instance* i){
+Solution* kOptL(Solution* sol,Instance* instance){
     try{
         cout<<"--> Creating the Gurobi environment"<<endl;
 		GRBEnv env = GRBEnv(true);
@@ -28,14 +28,16 @@ Solution* kOptL(Solution* sol,Instance* i){
         cout<<"--> Creating the variables"<<endl;
         stringstream name;
 
-        int n = i-> nbNodes;
-        int m = i-> nbDemands;
+        int n = instance-> nbNodes;
+        int m = instance-> nbDemands;
+        int arcCapacity = instance->arcCapacity;
+
         GRBVar*** x1 = new GRBVar** [n];
-        for (int i=0;i<n;++i){
+        for (int i=0;i<n;i++){
             x1[i] = new GRBVar* [n];
-            for (int j=0;j<n;++j){
-                x1[i][j] = new GRBVar [n];
-                for (int k=0;k<n; ++k){
+            for (int j=0;j<n;j++){
+                x1[i][j] = new GRBVar [m];
+                for (int k=0;k<m; k++){
                     name << "x1[" << i<<"][" << j << "][" << k << "]";
                     x1[i][j][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, name.str());
                     name.str("");
@@ -44,11 +46,11 @@ Solution* kOptL(Solution* sol,Instance* i){
         }
 
         GRBVar*** x2 = new GRBVar** [n];
-        for (int i=0;i<n;++i){
+        for (int i=0;i<n;i++){
             x2[i] = new GRBVar* [n];
-            for (int j=0;j<n;++j){
-                x2[i][j] = new GRBVar [n];
-                for (int k=0;k<n; ++k){
+            for (int j=0;j<n;j++){
+                x2[i][j] = new GRBVar [m];
+                for (int k=0;k<m; k++){
                     name << "x2[" << i<<"][" << j << "][" << k << "]";
                     x2[i][j][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, name.str());
                     name.str("");
@@ -56,129 +58,100 @@ Solution* kOptL(Solution* sol,Instance* i){
             }
         }
 
+        
+        GRBVar* y = new GRBVar [n];
+        for (int i=0;i<n; i++){
+            name << "y[" << i<<"]";
+            y[i] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, name.str());
+            name.str("");
+        }
+
+        GRBVar** z = new GRBVar* [n];
+        for (int i=0;i<n; i++){
+            z[i] = new GRBVar [m];
+            for (int k=0;k<m; k++){
+                name << "z[" << i<<"]["<< k<<"]";
+                z[i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY, name.str());
+                name.str("");
+            }
+        }
+
         cout<<"--> Creating the Objective"<<endl;
 
         GRBLinExpr obj = 0;
-		for(int i=0;i<n;++i){
-            for(int j=0;j<n;++j){
-                for (int k=0;k<n; k++){
-			        obj+=x1[i][j][k];
-                }
+		for(int i=0;i<n-1;i++){
+            for(int k=0;k<m;k++){
+                obj+=z[i][k];
             }
 		}
-		model.setObjective(obj, GRB_MINIMIZE);
+		model.setObjective(obj, GRB_MAXIMIZE);
 
-        // cout<<"--> Creating constraints"<<endl;
+        cout<<"--> Creating constraints"<<endl;
 
-        // cout<<"--> Constraint : initially get out of 0"<<endl;
+        cout<<"--> Constraint : affect each demand to VNF"<<endl;
 
-        // GRBLinExpr source = 0;
-        // for (int i=0;i<n;i++){
-        //     source += x[0][i][0];
-        // }
-        // name << "initial from 0";
-        // model.addConstr(source==1,name.str());
-        // name.str("");
+        for (int k=0;k<m;k++){
+            GRBLinExpr aVNF = 0;
+            for (int i=0;i<n;i++){
+                aVNF += z[i][k];
+            }
+            name << "affectation of demand " << k;
+            model.addConstr(aVNF==1,name.str());
+            name.str("");
+        }
 
-        // cout<<"--> Constraint : finnaly return to 0"<<endl;
+        cout<<"--> Constraint : redundancy of y/z"<<endl;
 
-        // GRBLinExpr destination = 0;
-        // for (int i=0;i<n;i++){
-        //     destination += x[i][0][n-1];
-        // }
-        // name << "destination to 0";
-        // model.addConstr(destination==1,name.str());
-        // name.str("");
+        for (int k=0;k<m;k++){
+            for (int i=0;i<n;i++){
+                GRBLinExpr redundancy = y[i] - z[i][k];
+                name << "z[" << i << "][" << k << "] <= y[" << i << "]";
+                model.addConstr(redundancy<=0,name.str());
+                name.str("");
+            }
+        }
 
-        // cout<<"--> Constraint : do not return/get out of 0 in between start and end"<<endl;
+        cout<<"--> Constraint : arc capacity"<<endl;
 
-        // GRBLinExpr pasDeRetourIntermediaire = 0;
-        // for (int k=1;k<n-1;k++){
-        //     for (int i=0;i<n;i++){
-        //         pasDeRetourIntermediaire += x[i][0][k] + x[0][i][k];
-        //     }
-        // }
-        // name << " no intermediary to/from 0";
-        // model.addConstr(pasDeRetourIntermediaire==0,name.str());
-        // name.str("");
+        for (int j=0;j<n;j++){
+            for (int i=0;i<n;i++){
+                GRBLinExpr capacityCtr = 0;
+                for (int k=0; k<m;k++){
+                    capacityCtr += x1[i][j][k] + x2[i][j][k];
+                }
+                name << "capacity on arc : " << i << " " << j;
+                model.addConstr(capacityCtr <= arcCapacity ,name.str());
+                name.str("");
+            }
+        }
 
-        // cout<<"--> Constraint : flow conservation"<<endl;
+        cout<<"--> setting model"<<endl;
+        model.set(GRB_DoubleParam_TimeLimit, 600.0);
+		model.set(GRB_IntParam_Threads,1);
 
-        // GRBLinExpr conservationFlow;
-        // for (int k=0;k<n-1;k++){
-        //     for (int i=0;i<n;i++){
-        //         conservationFlow = 0;
-        //         for (int j=0;j<n;j++){
-        //             conservationFlow += x[j][i][k] - x[i][j][k+1];
-        //         }
-        //         name << "conservation flow etape " << k << " on vertex " << i;
-        //         model.addConstr(conservationFlow==0,name.str());
-        //         name.str("");
-        //     }
-        // }
+        cout<<"--> optimize"<<endl;
+        model.optimize();
+		model.write("model.lp");
 
-        // cout<<"--> Constraint : go only one time to each node, get out only one time from each node"<<endl;
+        int status = model.get(GRB_IntAttr_Status);
+		if (status == GRB_OPTIMAL || (status== GRB_TIME_LIMIT && model.get(GRB_IntAttr_SolCount)>0)){
+			cout << "Succes! (Status: " << status << ")" << endl;
+			cout << "Runtime : " << model.get(GRB_DoubleAttr_Runtime) << " seconds"<<endl;
 
-        // GRBLinExpr uneEtUneSeule;
-        // GRBLinExpr uneEtUneSeule2;
-        // for (int i=0;i<n;i++){
+			cout<<"--> Printing results "<<endl;
+			model.write("solution.sol");
+			cout << "Objective value = "<< model.get(GRB_DoubleAttr_ObjVal)  << endl;
 
-        //     uneEtUneSeule=0;
-        //     uneEtUneSeule2=0;
-
-        //     for (int j=0;j<n;j++){
-        //         for (int k=0;k<n;k++){
-        //             uneEtUneSeule+=x[j][i][k];
-        //             uneEtUneSeule2+=x[i][j][k];
-        //         }
-        //     }
-
-        //     name << " on arrive une et une seule fois a " << i;
-        //     model.addConstr(uneEtUneSeule==1,name.str());
-        //     name.str("");
-
-        //     name << " on part une et une seule fois a " << i;
-        //     model.addConstr(uneEtUneSeule2==1,name.str());
-        //     name.str("");
-        // }
-
-        // cout<<"--> Constraint bonus : don't go from i to i"<<endl;
-
-        // for (int i=0;i<n;i++){
-        //     for (int k=0;k<n;k++){
-        //         GRBLinExpr pasboucle=0;
-        //         pasboucle = x[i][i][k];
-        //         model.addConstr(pasboucle==0,name.str());
-        //     }
-        // }
-
-        // cout<<"--> setting model"<<endl;
-        // model.set(GRB_DoubleParam_TimeLimit, 600.0);
-		// model.set(GRB_IntParam_Threads,1);
-
-        // cout<<"--> optimize"<<endl;
-        // model.optimize();
-		// model.write("model.lp");
-
-        // int status = model.get(GRB_IntAttr_Status);
-		// if (status == GRB_OPTIMAL || (status== GRB_TIME_LIMIT && model.get(GRB_IntAttr_SolCount)>0)){
-		// 	cout << "Succes! (Status: " << status << ")" << endl;
-		// 	cout << "Runtime : " << model.get(GRB_DoubleAttr_Runtime) << " seconds"<<endl;
-
-		// 	cout<<"--> Printing results "<<endl;
-		// 	model.write("solution.sol");
-		// 	cout << "Objective value = "<< model.get(GRB_DoubleAttr_ObjVal)  << endl;
-
-        //     for(int i=0;i<n;i++){
-        //         for(int j=0;j<n;j++){
-        //             for (int k=0;k<n;k++){
-        //                 if(x[i][j][k].get(GRB_DoubleAttr_X)>0){
-        //                     cout << "x["<<i<<"][" << j << "][" << k << "] is used on flow"<< endl;
-        //                 }
-        //             }
-        //         }
-		// 	}
-        // }
+            // for(int i=0;i<n;i++){
+            //     for(int j=0;j<n;j++){
+            //         for (int k=0;k<n;k++){
+            //             if(x[i][j][k].get(GRB_DoubleAttr_X)>0){
+            //                 cout << "x["<<i<<"][" << j << "][" << k << "] is used on flow"<< endl;
+            //             }
+            //         }
+            //     }
+			// }
+        }
     } catch(GRBException e) {
 		cout << "Error code = " << e.getErrorCode() << endl;
 		cout << e.getMessage() << endl;
