@@ -105,7 +105,7 @@ Instance* load(std::string path){
     }
 
     Instance* i = new Instance(nbNodes,adjencyMatrix,lvnf,mvnf,hvnf,nbDemands,demandsStart,demandsEnd,demands,0,0);
-    i = new Instance(nbNodes,adjencyMatrix,lvnf,mvnf,hvnf,nbDemands,demandsStart,demandsEnd,demands,arcCapacity(i),0);
+    i = new Instance(nbNodes,adjencyMatrix,lvnf,mvnf,hvnf,nbDemands,demandsStart,demandsEnd,demands,generateArcCapacity(i),0);
     return i;
 
 }

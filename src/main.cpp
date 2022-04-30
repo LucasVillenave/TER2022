@@ -11,7 +11,7 @@ int main(int   argc,char *argv[])
 
   clean(file);
   Instance* i = load(file);
-  i->print();
+  // i->print();
   Instance* iA = new Instance(i->nbNodes,i->adjacencyMatrix,
               i->lowVNFCapacity,i->mediumVNFCapacity,i->highVNFCapacity,
               i->nbDemands,i->demandsStart,i->demandsEnd,i->demands,
@@ -23,5 +23,6 @@ int main(int   argc,char *argv[])
   // std::cout << iA->check(sol,iA->highVNFCapacity) << std::endl;
   // std::cout << "\n";
 
-  SPMD(sol,iA,iA->highVNFCapacity,iA->nbNodes);
+  // SPMD(sol,iA,iA->highVNFCapacity,iA->nbNodes);
+  SP(sol,i,i->lowVNFCapacity,1);
 }

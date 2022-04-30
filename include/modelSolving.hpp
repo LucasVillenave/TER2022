@@ -4,8 +4,10 @@
 #include "Instance.hpp"
 #include "Solution.hpp"
 
-int arcCapacity(Instance* i);
+int generateArcCapacity(Instance* i);
 
 Solution* SPMD(Solution* sol, Instance* i, int VNFCapacity, int VNFfix);
+
+Solution* SP(Solution* sol, Instance* i, int VNFCapacity, int VNFlb);
 
 #endif

@@ -6,16 +6,7 @@
 #include <climits>
 using namespace std;
 
-//ToDo
-int arcCapacity(Instance* i){
-    int s = 0;
-    for (int d:i->demands){
-        s+=d;
-    }
-    return s;
-}
-
-Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
+Solution* SP(Solution* sol,Instance* instance, int VNFCapacity, int VNFlb){
     try{
         cout<<"--> Creating the Gurobi environment"<<endl;
 		GRBEnv env = GRBEnv(true);
@@ -77,19 +68,17 @@ Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
             }
         }
 
-        cout<<"--> Creating the Objective"<<endl;
+        cout<<"--> Creating the Objective (1)"<<endl;
 
         GRBLinExpr obj = 0;
-		for(int i=0;i<n-1;i++){
-            for(int k=0;k<m;k++){
-                obj+=z[i][k];
-            }
+		for(int i=0;i<n;i++){
+            obj+=y[i];
 		}
-		model.setObjective(obj, GRB_MAXIMIZE);
+		model.setObjective(obj, GRB_MINIMIZE);
 
         cout<<"--> Creating constraints"<<endl;
 
-        cout<<"--> Constraint : affect each demand to VNF (16)"<<endl;
+        cout<<"--> Constraint : affect each demand to VNF (2)"<<endl;
 
         for (int k=0;k<m;k++){
             GRBLinExpr aVNF = 0;
@@ -104,7 +93,7 @@ Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
         cout<<"--> Constraint : redundancy of y/z (3)"<<endl;
 
         for (int k=0;k<m;k++){
-            for (int i=0;i<n-1;i++){
+            for (int i=0;i<n;i++){
                 GRBLinExpr redundancy = y[i] - z[i][k];
                 name << "z[" << i << "][" << k << "]_<=_y[" << i << "]";
                 model.addConstr(redundancy>=0,name.str());
@@ -114,8 +103,8 @@ Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
 
         cout<<"--> Constraint : arc capacity (4)"<<endl;
 
-        for (int j=0;j<n-1;j++){
-            for (int i=0;i<n-1;i++){
+        for (int j=0;j<n;j++){
+            for (int i=0;i<n;i++){
                 if (adjacencyMatrix[i][j]==1){
                     GRBLinExpr capacityCtr = 0;
                     for (int k=0; k<m;k++){
@@ -128,7 +117,7 @@ Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
             }
         }
 
-        cout<<"--> Constraint : flow 1 conservation (17.1)"<<endl;
+        cout<<"--> Constraint : flow 1 conservation (5.1)"<<endl;
 
         for (int k=0;k<m;k++){          
             GRBLinExpr flow1 = 0;
@@ -144,7 +133,7 @@ Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
             name.str("");
         }
 
-        cout<<"--> Constraint : flow 1 conservation (17.2)"<<endl;
+        cout<<"--> Constraint : flow 1 conservation (5.2)"<<endl;
 
         for (int k=0;k<m;k++){
             for (int i=0;i<n;i++){
@@ -163,7 +152,7 @@ Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
             } 
         }
 
-        cout<<"--> Constraint : flow 2 conservation (18.1)"<<endl;
+        cout<<"--> Constraint : flow 2 conservation (6.1)"<<endl;
 
         for (int k=0;k<m;k++){          
             GRBLinExpr flow2 = 0;
@@ -179,7 +168,7 @@ Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
             name.str("");
         }
 
-        cout<<"--> Constraint : flow 2 conservation (18.2)"<<endl;
+        cout<<"--> Constraint : flow 2 conservation (6.2)"<<endl;
 
         for (int k=0;k<m;k++){
             for (int i=0;i<n;i++){
@@ -232,7 +221,7 @@ Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
 
         cout<<"--> Constraint : VNF capacity (9)"<<endl;
 
-        for (int i=0;i<n-1;i++){       
+        for (int i=0;i<n;i++){       
             GRBLinExpr sum = 0;
             sum -= VNFCapacity*y[i];
             for (int k=0; k<m;k++){
@@ -243,7 +232,7 @@ Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
             name.str("");
         }
 
-        cout<<"--> Constraint : open exactly VNFfix VNF (19)"<<endl;
+        cout<<"--> Constraint : open at least VNFlb VNF (10)"<<endl;
 
 
         GRBLinExpr VNFcount = 0;
@@ -251,7 +240,7 @@ Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
             VNFcount+=y[i];
         }
         name << "VNF_count";
-        model.addConstr(VNFcount == VNFfix ,name.str());
+        model.addConstr(VNFcount >= VNFlb ,name.str());
         name.str("");
 
         cout<<"--> Constraint : do not root by a if you are not served by a (20)"<<endl;
