@@ -15,7 +15,7 @@ int arcCapacity(Instance* i){
     return s;
 }
 
-Solution* kOptL(Solution* sol,Instance* instance){
+Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
     try{
         cout<<"--> Creating the Gurobi environment"<<endl;
 		GRBEnv env = GRBEnv(true);
@@ -31,6 +31,7 @@ Solution* kOptL(Solution* sol,Instance* instance){
         int n = instance-> nbNodes;
         int m = instance-> nbDemands;
         int arcCapacity = instance->arcCapacity;
+        vector<vector<int>> adjacencyMatrix = instance->adjacencyMatrix;
 
         GRBVar*** x1 = new GRBVar** [n];
         for (int i=0;i<n;i++){
@@ -103,25 +104,27 @@ Solution* kOptL(Solution* sol,Instance* instance){
         cout<<"--> Constraint : redundancy of y/z (3)"<<endl;
 
         for (int k=0;k<m;k++){
-            for (int i=0;i<n;i++){
+            for (int i=0;i<n-1;i++){
                 GRBLinExpr redundancy = y[i] - z[i][k];
                 name << "z[" << i << "][" << k << "]_<=_y[" << i << "]";
-                model.addConstr(redundancy<=0,name.str());
+                model.addConstr(redundancy>=0,name.str());
                 name.str("");
             }
         }
 
         cout<<"--> Constraint : arc capacity (4)"<<endl;
 
-        for (int j=0;j<n;j++){
-            for (int i=0;i<n;i++){
-                GRBLinExpr capacityCtr = 0;
-                for (int k=0; k<m;k++){
-                    capacityCtr += x1[i][j][k] + x2[i][j][k];
+        for (int j=0;j<n-1;j++){
+            for (int i=0;i<n-1;i++){
+                if (adjacencyMatrix[i][j]==1){
+                    GRBLinExpr capacityCtr = 0;
+                    for (int k=0; k<m;k++){
+                        capacityCtr += (x1[i][j][k] + x2[i][j][k])*instance->demands[k];
+                    }
+                    name << "capacity_on_arc_" << i << "_" << j;
+                    model.addConstr(capacityCtr <= arcCapacity ,name.str());
+                    name.str("");
                 }
-                name << "capacity_on_arc_" << i << "_" << j;
-                model.addConstr(capacityCtr <= arcCapacity ,name.str());
-                name.str("");
             }
         }
 
@@ -130,30 +133,139 @@ Solution* kOptL(Solution* sol,Instance* instance){
         for (int k=0;k<m;k++){          
             GRBLinExpr flow1 = 0;
             int i = instance->demandsStart[k];
+            flow1 += z[i][k];
             for (int j=0; j<n;j++){
-                flow1 += x1[i][j][k] - x1[j][i][k] + z[i][k];
+                if (adjacencyMatrix[i][j]==1){
+                    flow1 += x1[i][j][k] - x1[j][i][k];
+                }
             }
-            name << "flow_conservation_of_demand_" << k << "_on_" << i << "_wich_is_demandStart";
-            model.addConstr(flow1 == 0 ,name.str());
+            name << "flow_conservation_1_of_demand_" << k << "_on_" << i << "_wich_is_demandStart";
+            model.addConstr(flow1 == 1 ,name.str());
             name.str("");
         }
 
-        // cout<<"--> Constraint : flow 1 conservation (17.2)"<<endl;
+        cout<<"--> Constraint : flow 1 conservation (17.2)"<<endl;
 
-        // for (int k=0;k<m;k++){
-        //     for (int i=0;i<n;i++){
-        //         if (instance->demandsStart[k]!=i){          
-        //             GRBLinExpr flow1 = 0;
-        //             for (int j=0; j<n;j++){
-        //                 flow1 += x1[i][j][k] - x1[j][i][k] + z[i][k];
-        //             }
-        //             name << "flow_conservation_of_demand_" << k << "_on_" << i;
-        //             model.addConstr(flow1 == 0 ,name.str());
-        //             name.str("");
-        //         } 
-        //     } 
-        // }
-        // rend model infaisable !
+        for (int k=0;k<m;k++){
+            for (int i=0;i<n;i++){
+                if (instance->demandsStart[k]!=i){
+                    GRBLinExpr flow1 = 0;
+                    flow1 += z[i][k];
+                    for (int j=0; j<n;j++){
+                        if (adjacencyMatrix[i][j]==1){
+                            flow1 += x1[i][j][k] - x1[j][i][k];
+                        }
+                    }
+                    name << "flow_conservation_1_of_demand_" << k << "_on_" << i;
+                    model.addConstr(flow1 == 0 ,name.str());
+                    name.str("");
+                } 
+            } 
+        }
+
+        cout<<"--> Constraint : flow 2 conservation (18.1)"<<endl;
+
+        for (int k=0;k<m;k++){          
+            GRBLinExpr flow2 = 0;
+            int i = instance->demandsEnd[k];
+            flow2 -= z[i][k];
+            for (int j=0; j<n;j++){
+                if (adjacencyMatrix[i][j]==1){
+                    flow2 += x2[i][j][k] - x2[j][i][k];
+                }
+            }
+            name << "flow_conservation_2_of_demand_" << k << "_on_" << i << "_wich_is_demandEnd";
+            model.addConstr(flow2 == -1 ,name.str());
+            name.str("");
+        }
+
+        cout<<"--> Constraint : flow 2 conservation (18.2)"<<endl;
+
+        for (int k=0;k<m;k++){
+            for (int i=0;i<n;i++){
+                if (instance->demandsEnd[k]!=i){          
+                    GRBLinExpr flow2 = 0;
+                    flow2 -= z[i][k];
+                    for (int j=0; j<n;j++){
+                        if (adjacencyMatrix[i][j]==1){
+                            flow2 += x2[i][j][k] - x2[j][i][k];
+                        }
+                    }
+                    name << "flow_conservation_2_of_demand_" << k << "_on_" << i;
+                    model.addConstr(flow2 == 0 ,name.str());
+                    name.str("");
+                } 
+            } 
+        }
+
+        cout<<"--> Constraint : one and only one exit (7)"<<endl;
+
+        for (int k=0;k<m;k++){
+            for (int i=0;i<n;i++){        
+                GRBLinExpr sum = 0;
+                for (int j=0; j<n;j++){
+                    if (adjacencyMatrix[i][j]==1){
+                        sum += x1[i][j][k] + x2[i][j][k];
+                    }
+                }
+                name << "one_exit_of_demand_" << k << "_on_" << i;
+                model.addConstr(sum <=1 ,name.str());
+                name.str("");
+            } 
+        }
+
+        cout<<"--> Constraint : one and only one enter (8)"<<endl;
+
+        for (int k=0;k<m;k++){
+            for (int i=0;i<n;i++){        
+                GRBLinExpr sum = 0;
+                for (int j=0; j<n;j++){
+                    if (adjacencyMatrix[i][j]==1){
+                        sum += x1[j][i][k] + x2[j][i][k];
+                    }
+                }
+                name << "one_enter_of_demand_" << k << "_on_" << i;
+                model.addConstr(sum <=1 ,name.str());
+                name.str("");
+            } 
+        }
+
+        cout<<"--> Constraint : VNF capacity (9)"<<endl;
+
+        for (int i=0;i<n-1;i++){       
+            GRBLinExpr sum = 0;
+            sum -= VNFCapacity*y[i];
+            for (int k=0; k<m;k++){
+                sum += z[i][k]*instance->demands[k];
+            }
+            name << "VNF_capacity_of_" << i;
+            model.addConstr(sum <=0 ,name.str());
+            name.str("");
+        }
+
+        cout<<"--> Constraint : open exactly VNFfix VNF (19)"<<endl;
+
+
+        GRBLinExpr VNFcount = 0;
+        for (int i=0;i<n;i++){       
+            VNFcount+=y[i];
+        }
+        name << "VNF_count";
+        model.addConstr(VNFcount == VNFfix ,name.str());
+        name.str("");
+
+        cout<<"--> Constraint : do not root by a if you are not served by a (20)"<<endl;
+
+        for (int k=0; k<m; k++){     
+            GRBLinExpr exitSum = 0;
+            exitSum -= z[n-1][k];
+            for (int i=0; i<n;i++){
+                exitSum += x1[i][n-1][k] + x2[i][n-1][k];
+            }
+            name << "use_of_a_in_demand_" << k;
+            model.addConstr(exitSum <=0 ,name.str());
+            name.str("");
+        }
 
         cout<<"--> setting model"<<endl;
         model.set(GRB_DoubleParam_TimeLimit, 600.0);
@@ -172,23 +284,40 @@ Solution* kOptL(Solution* sol,Instance* instance){
 			model.write("solution.sol");
 			cout << "Objective value = "<< model.get(GRB_DoubleAttr_ObjVal)  << endl;
 
-            for (int k=0;k<m;k++){
+
+            if (false){
                 for (int i=0;i<n;i++){
-                    if(z[i][k].get(GRB_DoubleAttr_X)>0){
-                        cout << "z["<<i<<"][" << k << "] is used"<< endl;
+                    if(y[i].get(GRB_DoubleAttr_X)>0){
+                        cout << "y["<<i<<"] is used"<< endl;
+                    }
+                }
+                for (int k=0;k<m;k++){
+                    for (int i=0;i<n;i++){
+                        if(z[i][k].get(GRB_DoubleAttr_X)>0){
+                            cout << "z["<<i<<"][" << k << "] is used where demand start = " << instance->demandsStart[k]
+                            << " and demand end = " << instance->demandsEnd[k] << endl;
+                        }
+                    }
+                }
+                for (int k=35;k<36;k++){
+                    for (int i=0;i<n;i++){
+                        for (int j=0;j<n;j++){
+                            if(x1[i][j][k].get(GRB_DoubleAttr_X)>0){
+                                cout << "x1["<<i<<"][" << j << "][" << k << "] is used"<< endl;
+                            }
+                        }
+                    }
+                }
+                for (int k=35;k<36;k++){
+                    for (int i=0;i<n;i++){
+                        for (int j=0;j<n;j++){
+                            if(x2[i][j][k].get(GRB_DoubleAttr_X)>0){
+                                cout << "x2["<<i<<"][" << j << "][" << k << "] is used"<< endl;
+                            }
+                        }
                     }
                 }
             }
-
-            // for(int i=0;i<n;i++){
-            //     for(int j=0;j<n;j++){
-            //         for (int k=0;k<n;k++){
-            //             if(x[i][j][k].get(GRB_DoubleAttr_X)>0){
-            //                 cout << "x["<<i<<"][" << j << "][" << k << "] is used on flow"<< endl;
-            //             }
-            //         }
-            //     }
-			// }
         }
     } catch(GRBException e) {
 		cout << "Error code = " << e.getErrorCode() << endl;

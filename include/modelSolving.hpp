@@ -6,6 +6,6 @@
 
 int arcCapacity(Instance* i);
 
-Solution* kOptL(Solution* sol, Instance* i);
+Solution* SPMD(Solution* sol, Instance* i, int VNFCapacity, int VNFfix);
 
 #endif

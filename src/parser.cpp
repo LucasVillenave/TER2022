@@ -20,6 +20,7 @@ vector<string> split(string s, char delim) {
 }
 
 vector<int> generateVNF(int n, vector<int> demands){
+
     vector<int> vnf;
     int hvnf = 0;
     for (int i=0;i<demands.size();i++){
@@ -36,7 +37,7 @@ vector<int> generateVNF(int n, vector<int> demands){
     return vnf;
 }
 
-Instance load(std::string path){
+Instance* load(std::string path){
     string prefixe = "../instances/cleaned/C";
     path = prefixe + path;
     
@@ -47,6 +48,9 @@ Instance load(std::string path){
     int nbNodes;
     int nbEdges;
     int nbDemands;
+    int lvnf;
+    int mvnf;
+    int hvnf;
     std::vector<std::vector<int>> adjencyMatrix;
     std::vector<int> demandsEnd;
     std::vector<int> demandsStart;
@@ -61,10 +65,14 @@ Instance load(std::string path){
     }
 
     getline(f,line);
+    getline(f,line);
     words = split(line,' ');
     nbNodes = stoi(words.at(0));
     nbEdges = stoi(words.at(1));
     nbDemands = stoi(words.at(2));
+    lvnf = stoi(words.at(3));
+    mvnf = stoi(words.at(4));
+    hvnf = stoi(words.at(5));
     getline(f,line);
 
     cout << "could get that n = " << nbNodes << ", m = " << nbEdges << ", and nD = " << nbDemands << endl;
@@ -83,6 +91,7 @@ Instance load(std::string path){
         getline(f,line);
         words = split(line,' ');
         adjencyMatrix.at(stoi(words.at(0))).at(stoi(words.at(1))) = 1;
+        adjencyMatrix.at(stoi(words.at(1))).at(stoi(words.at(0))) = 1;
     }
 
     getline(f,line);
@@ -95,9 +104,9 @@ Instance load(std::string path){
         demandsEnd.push_back(stoi(words.at(1)));
     }
 
-    Instance* i = new Instance(nbNodes,adjencyMatrix,0,0,0,nbDemands,demandsStart,demandsEnd,demands,0,0);
-    i = new Instance(nbNodes,adjencyMatrix,0,0,0,nbDemands,demandsStart,demandsEnd,demands,arcCapacity(i),0);
-    return *i;
+    Instance* i = new Instance(nbNodes,adjencyMatrix,lvnf,mvnf,hvnf,nbDemands,demandsStart,demandsEnd,demands,0,0);
+    i = new Instance(nbNodes,adjencyMatrix,lvnf,mvnf,hvnf,nbDemands,demandsStart,demandsEnd,demands,arcCapacity(i),0);
+    return i;
 
 }
 
@@ -114,7 +123,9 @@ void Gwrite(int nbNodes, int nbEdges, int nbDemands, int** edges, vector<int> de
 
     vector<int> vnf = generateVNF(nbNodes,demands);
 
-    f << nbNodes << separator << nbEdges << separator << nbDemands << separator << vnf[0] << separator << vnf[1] << separator << vnf[2] << separator << vnf[2] << endl << endl;
+    f << "nbNodes nbEdges nbDemands lvnf mvnf hvnf u" << endl;
+
+    f << nbNodes << separator << nbEdges << separator << nbDemands << separator << vnf[0] << separator << vnf[1] << separator << vnf[2] << endl << endl;
 
     for (int i=0;i<nbNodes;i++){
         for (int j=0;j<nbNodes;j++){
