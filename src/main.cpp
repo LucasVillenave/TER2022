@@ -24,5 +24,7 @@ int main(int   argc,char *argv[])
   // std::cout << "\n";
 
   // SPMD(sol,iA,iA->highVNFCapacity,iA->nbNodes);
-  SP(sol,i,i->lowVNFCapacity,1);
+  
+  i->arcCapacity = 1000;
+  SP(sol,i,i->highVNFCapacity,0);
 }

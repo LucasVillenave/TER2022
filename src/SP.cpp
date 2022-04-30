@@ -243,19 +243,6 @@ Solution* SP(Solution* sol,Instance* instance, int VNFCapacity, int VNFlb){
         model.addConstr(VNFcount >= VNFlb ,name.str());
         name.str("");
 
-        cout<<"--> Constraint : do not root by a if you are not served by a (20)"<<endl;
-
-        for (int k=0; k<m; k++){     
-            GRBLinExpr exitSum = 0;
-            exitSum -= z[n-1][k];
-            for (int i=0; i<n;i++){
-                exitSum += x1[i][n-1][k] + x2[i][n-1][k];
-            }
-            name << "use_of_a_in_demand_" << k;
-            model.addConstr(exitSum <=0 ,name.str());
-            name.str("");
-        }
-
         cout<<"--> setting model"<<endl;
         model.set(GRB_DoubleParam_TimeLimit, 600.0);
 		model.set(GRB_IntParam_Threads,1);
@@ -274,13 +261,14 @@ Solution* SP(Solution* sol,Instance* instance, int VNFCapacity, int VNFlb){
 			cout << "Objective value = "<< model.get(GRB_DoubleAttr_ObjVal)  << endl;
 
 
-            if (false){
+            if (true){
+                int demandToCheck = 42;
                 for (int i=0;i<n;i++){
                     if(y[i].get(GRB_DoubleAttr_X)>0){
                         cout << "y["<<i<<"] is used"<< endl;
                     }
                 }
-                for (int k=0;k<m;k++){
+                for (int k=demandToCheck;k<demandToCheck+1;k++){
                     for (int i=0;i<n;i++){
                         if(z[i][k].get(GRB_DoubleAttr_X)>0){
                             cout << "z["<<i<<"][" << k << "] is used where demand start = " << instance->demandsStart[k]
@@ -288,7 +276,7 @@ Solution* SP(Solution* sol,Instance* instance, int VNFCapacity, int VNFlb){
                         }
                     }
                 }
-                for (int k=35;k<36;k++){
+                for (int k=demandToCheck;k<demandToCheck+1;k++){
                     for (int i=0;i<n;i++){
                         for (int j=0;j<n;j++){
                             if(x1[i][j][k].get(GRB_DoubleAttr_X)>0){
@@ -297,7 +285,7 @@ Solution* SP(Solution* sol,Instance* instance, int VNFCapacity, int VNFlb){
                         }
                     }
                 }
-                for (int k=35;k<36;k++){
+                for (int k=demandToCheck;k<demandToCheck+1;k++){
                     for (int i=0;i<n;i++){
                         for (int j=0;j<n;j++){
                             if(x2[i][j][k].get(GRB_DoubleAttr_X)>0){
