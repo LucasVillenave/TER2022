@@ -6,7 +6,11 @@
 #include <climits>
 using namespace std;
 
-Solution* SP(Solution* sol,Instance* instance, int VNFCapacity, int VNFlb){
+Solution* SP(Instance* instance, int VNFCapacity, int VNFlb){
+
+    Solution* returnSol;
+
+
     try{
         cout<<"--> Creating the Gurobi environment"<<endl;
 		GRBEnv env = GRBEnv(true);
@@ -23,6 +27,42 @@ Solution* SP(Solution* sol,Instance* instance, int VNFCapacity, int VNFlb){
         int m = instance-> nbDemands;
         int arcCapacity = instance->arcCapacity;
         vector<vector<int>> adjacencyMatrix = instance->adjacencyMatrix;
+
+        //creating the returnSol variables
+
+        vector<bool> openVNF;
+        vector<vector<bool>> useVNFforDemand;
+        vector<vector<vector<bool>>> useEdgeForDemandStart;
+        vector<vector<vector<bool>>> useEdgeForDemandEnd;
+
+        for (int i=0; i<n; i++){
+            vector<bool> tmpUseVNF;
+            vector<vector<bool>> tmpStart;
+            vector<vector<bool>> tmpEnd;
+
+            for (int k=0; k<m; k++){
+                tmpUseVNF.push_back(false);
+            }
+
+            for (int j=0; j<n; j++){
+                vector<bool> tmptmpStart;
+                vector<bool> tmptmpEnd;
+                for (int k=0; k<m; k++){
+                    tmptmpStart.push_back(false);
+                    tmptmpEnd.push_back(false);
+                }
+                tmpStart.push_back(tmptmpStart);
+                tmpEnd.push_back(tmptmpEnd);
+            }
+            openVNF.push_back(false);
+            useVNFforDemand.push_back(tmpUseVNF);
+            useEdgeForDemandStart.push_back(tmpStart);
+            useEdgeForDemandEnd.push_back(tmpEnd);
+        }
+
+
+
+        // creating the model variables
 
         GRBVar*** x1 = new GRBVar** [n];
         for (int i=0;i<n;i++){
@@ -262,12 +302,53 @@ Solution* SP(Solution* sol,Instance* instance, int VNFCapacity, int VNFlb){
 
 
             if (true){
-                int demandToCheck = 42;
+
+                int demandToCheck = 12;
                 for (int i=0;i<n;i++){
                     if(y[i].get(GRB_DoubleAttr_X)>0){
+                        openVNF[i] = true;
                         cout << "y["<<i<<"] is used"<< endl;
+                    }else{
+                        openVNF[i] = false;
                     }
                 }
+                for (int k=0;k<m;k++){
+                    for (int i=0;i<n;i++){
+                        if(z[i][k].get(GRB_DoubleAttr_X)>0){
+                            useVNFforDemand[i][k] = true;
+                        }else{
+                            useVNFforDemand[i][k] = false;
+                        }
+                    }
+                }
+                for (int k=0;k<m;k++){
+                    for (int i=0;i<n;i++){
+                        for (int j=0;j<n;j++){
+                            if(x1[i][j][k].get(GRB_DoubleAttr_X)>0){
+                                if (k==12){
+                                }
+                                useEdgeForDemandStart[i][j][k] = true;
+                            }else{
+                                useEdgeForDemandStart[i][j][k] = false;
+                            }
+                        }
+                    }
+                }
+                
+                for (int k=0;k<m;k++){
+                    for (int i=0;i<n;i++){
+                        for (int j=0;j<n;j++){
+                            if(x2[i][j][k].get(GRB_DoubleAttr_X)>0){
+                                useEdgeForDemandEnd[i][j][k] = true;
+                            }else{
+                                useEdgeForDemandEnd[i][j][k] = false;
+                            }
+                        }
+                    }
+                }
+                
+                returnSol = new Solution(openVNF,useVNFforDemand,useEdgeForDemandStart,useEdgeForDemandEnd);
+
                 for (int k=demandToCheck;k<demandToCheck+1;k++){
                     for (int i=0;i<n;i++){
                         if(z[i][k].get(GRB_DoubleAttr_X)>0){
@@ -276,6 +357,7 @@ Solution* SP(Solution* sol,Instance* instance, int VNFCapacity, int VNFlb){
                         }
                     }
                 }
+
                 for (int k=demandToCheck;k<demandToCheck+1;k++){
                     for (int i=0;i<n;i++){
                         for (int j=0;j<n;j++){
@@ -285,6 +367,7 @@ Solution* SP(Solution* sol,Instance* instance, int VNFCapacity, int VNFlb){
                         }
                     }
                 }
+
                 for (int k=demandToCheck;k<demandToCheck+1;k++){
                     for (int i=0;i<n;i++){
                         for (int j=0;j<n;j++){
@@ -294,6 +377,7 @@ Solution* SP(Solution* sol,Instance* instance, int VNFCapacity, int VNFlb){
                         }
                     }
                 }
+
             }
         }
     } catch(GRBException e) {
@@ -303,5 +387,5 @@ Solution* SP(Solution* sol,Instance* instance, int VNFCapacity, int VNFlb){
 
     }
 
-    return sol;
+    return returnSol;
 }

@@ -22,6 +22,7 @@ Solution::Solution(std::vector<bool>  openVNF,std::vector<std::vector<bool>>  us
   this->useVNFforDemand=useVNFforDemand;
 
   this->useEdgeForDemandStart=useEdgeForDemandStart;
+  
   this->useEdgeForDemandEnd=useEdgeForDemandEnd;
 
   this->solvingTime=-1.0;

@@ -24,7 +24,11 @@ int main(int   argc,char *argv[])
   // std::cout << "\n";
 
   // SPMD(sol,iA,iA->highVNFCapacity,iA->nbNodes);
-  
+
+
+
   i->arcCapacity = 1000;
-  SP(sol,i,i->highVNFCapacity,0);
+  Solution* spSol = SP(i,i->highVNFCapacity,0);
+
+  std::cout << "return a feasible solution : " << std::endl << i->check(spSol,i->highVNFCapacity) <<std::endl;
 }

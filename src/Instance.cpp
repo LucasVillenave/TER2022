@@ -1,24 +1,25 @@
 #include "Instance.hpp"
+using namespace std;
 
 
 Solution* Instance::getTrivialSolution(){
        if (hasA == 0){addA();}
 
-       std::vector<bool> openVNF;
-       std::vector<std::vector<bool>>  useVNFforDemand;
-       std::vector<std::vector<std::vector<bool>>>  useEdgeForDemandStart;
-       std::vector<std::vector<std::vector<bool>>>  useEdgeForDemandEnd;
+       vector<bool> openVNF;
+       vector<vector<bool>>  useVNFforDemand;
+       vector<vector<vector<bool>>>  useEdgeForDemandStart;
+       vector<vector<vector<bool>>>  useEdgeForDemandEnd;
 
-      std::cout << " here we have " << nbNodes << " nodes " << std::endl;
+      cout << " here we have " << nbNodes << " nodes " << endl;
 
        for (int i=0 ; i<nbNodes-1; i++){
-         std::vector<bool> tmp1;
-         std::vector<std::vector<bool>> tmp2;
-         std::vector<std::vector<bool>> tmp3;
+         vector<bool> tmp1;
+         vector<vector<bool>> tmp2;
+         vector<vector<bool>> tmp3;
          
          for (int j=0; j<nbNodes-1; j++){
-           std::vector<bool> tmptmp2;
-           std::vector<bool> tmptmp3;
+           vector<bool> tmptmp2;
+           vector<bool> tmptmp3;
 
            for (int k=0; k<nbDemands; k++){
             tmptmp2.push_back(false);
@@ -28,8 +29,8 @@ Solution* Instance::getTrivialSolution(){
            tmp2.push_back(tmptmp2);
            tmp3.push_back(tmptmp3);
          }
-         std::vector<bool> tmptmp2;
-         std::vector<bool> tmptmp3;
+         vector<bool> tmptmp2;
+         vector<bool> tmptmp3;
 
          for (int k=0; k<nbDemands; k++){
           tmptmp2.push_back(demandsStart[k]==i);
@@ -46,13 +47,13 @@ Solution* Instance::getTrivialSolution(){
          openVNF.push_back(false);
        }
 
-       std::vector<bool> tmp1;
-       std::vector<std::vector<bool>> tmp2;
-       std::vector<std::vector<bool>> tmp3;
+       vector<bool> tmp1;
+       vector<vector<bool>> tmp2;
+       vector<vector<bool>> tmp3;
 
        for (int i=0; i<nbNodes; i++){
-         std::vector<bool> tmptmp3;
-         std::vector<bool> tmptmp2;
+         vector<bool> tmptmp3;
+         vector<bool> tmptmp2;
 
          for (int j=0;j<nbDemands;j++){
           tmptmp3.push_back(demandsEnd[j]==i);
@@ -100,11 +101,13 @@ int Instance::check(Solution* sol, int VNFCapacity){
 int Instance::flowCheck(Solution* sol){
     int n = nbNodes;
     if (sol-> openVNF.size()!=n){
-        std::cout << "/!\\ solution given hasn't the same number of nodes as graph checking with" << std::endl;
+        cout << sol-> openVNF.size() << " != " << n;
+        cout << "/!\\ solution given hasn't the same number of nodes as graph checking with" << endl;
         return 0;
     }
     if (sol-> useVNFforDemand[0].size()!=nbDemands){
-        std::cout << "/!\\ solution given hasn't the same number of demands as graph checking with" << std::endl;
+        cout << sol->useVNFforDemand[0].size() << " != " << nbDemands;
+        cout << "/!\\ solution given hasn't the same number of demands as graph checking with" << endl;
         return 0;
     }
 
@@ -116,7 +119,7 @@ int Instance::flowCheck(Solution* sol){
                     kVNF = i;
                 }else{
                     // using 2 or more vnf for a demand
-                    return -1;
+                    return -102;
                 }
             }
         }
@@ -145,20 +148,37 @@ int Instance::flowCheck(Solution* sol){
             }
         }
 
+        if (kVNF == demandsEnd[k]){
+            switch3++;
+            switch4++;
+        }
+        if (kVNF == demandsStart[k]){
+            switch1++;
+            switch2++;
+        }
+
         if (switch1!=1){
-                return -3;
-            }
-            if (switch2!=1){
-                return -4;
-            }
-            if (switch3!=1){
-                return -5;
-            }
-            if (switch4!=1){
-                return -6;
-            }
-            // flow 1 start from start, end to vnf
-            // flow 2 start from vnf, end to end
+            cout << "switch of "<< switch1 << endl;
+            cout << "on demand " << k << endl;
+            return -3;
+        }
+        if (switch2!=1){
+            cout << "switch of "<< switch2 << endl;
+            cout << "on demand " << k << endl;
+            return -4;
+        }
+        if (switch3!=1){
+            cout << "switch of "<< switch3 << endl;
+            cout << "on demand " << k << endl;
+            return -5;
+        }
+        if (switch4!=1){
+            cout << "switch of "<< switch4 << endl;
+            cout << "on demand " << k << endl;
+            return -6;
+        }
+        // flow 1 start from start, end to vnf
+        // flow 2 start from vnf, end to end
 
         for (int i=0;i<n;i++){
             if (i!=kVNF && i!=demandsStart[k] && i!=demandsEnd[k]){
@@ -177,15 +197,17 @@ int Instance::flowCheck(Solution* sol){
                     if (sol->useEdgeForDemandEnd[i][j][k]==1){
                         counter2--;
                     }
-
-                    if (counter1!=0){
-                        return -7;
-                    }
-                    if (counter2!=0){
-                        return -8;
-                    }
-                    //flow conservation
                 }
+
+                if (counter1!=0){
+                    cout << endl << i << endl;
+                    cout << endl << k << endl;
+                    return -7;
+                }
+                if (counter2!=0){
+                    return -8;
+                }
+                //flow conservation
             }
         }
     }
@@ -194,7 +216,7 @@ int Instance::flowCheck(Solution* sol){
 
     void Instance::addA()
     {
-       std::vector<int> a;
+       vector<int> a;
        int s = 0;
        
        for (int i=0;i<nbNodes;i++){
@@ -219,35 +241,35 @@ int Instance::flowCheck(Solution* sol){
 
     void Instance::print()
     {
-       std::cout << "Network with " << nbNodes << " nodes\n";
+       cout << "Network with " << nbNodes << " nodes\n";
 
-       std::cout << "Arc capacity: " << arcCapacity << "\n";
-       std::cout << "Service capacity: " << serviceCapacity << "\n";
+       cout << "Arc capacity: " << arcCapacity << "\n";
+       cout << "Service capacity: " << serviceCapacity << "\n";
 
-       std::cout << "Low VNF Capacity:" << lowVNFCapacity << "\n";
-       std::cout << "Medium VNF Capacity:" << mediumVNFCapacity << "\n";
-       std::cout << "High VNF Capacity:" << highVNFCapacity << "\n";
+       cout << "Low VNF Capacity:" << lowVNFCapacity << "\n";
+       cout << "Medium VNF Capacity:" << mediumVNFCapacity << "\n";
+       cout << "High VNF Capacity:" << highVNFCapacity << "\n";
 
-       std::cout << nbDemands << " demands:\n";
+       cout << nbDemands << " demands:\n";
        for(int demandIndex=0;demandIndex<nbDemands;demandIndex++)
        {
-         std::cout << "Demand " << demandIndex << ", " << demands[demandIndex] << " from node " << demandsStart[demandIndex] << " to node " << demandsEnd[demandIndex] << "\n";
+         cout << "Demand " << demandIndex << ", " << demands[demandIndex] << " from node " << demandsStart[demandIndex] << " to node " << demandsEnd[demandIndex] << "\n";
        }
 
-       std::cout << "Adjacency Matrix:\n";
-       for(std::vector<int> line:adjacencyMatrix)
+       cout << "Adjacency Matrix:\n";
+       for(vector<int> line:adjacencyMatrix)
        {
          for(int arcValue:line)
          {
            if (arcValue>=0){
-             std::cout<<" ";
+             cout<<" ";
            }
-           std::cout << arcValue;
+           cout << arcValue;
            for (int i=0;i<3-logsize(arcValue);i++){
-             std::cout<<" ";
+             cout<<" ";
            }
          }
-         std::cout << "\n";
+         cout << "\n";
        }
      }
 
@@ -259,7 +281,7 @@ int Instance::capacityCheck(Solution* sol, int VNFcapacity){
                 arcSum += demands[k]*(sol->useEdgeForDemandEnd[i][j][k] + sol->useEdgeForDemandStart[i][j][k]);
             }
             if (arcSum>arcCapacity){
-                return -1;
+                return -101;
             }
         }
 

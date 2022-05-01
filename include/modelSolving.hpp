@@ -8,6 +8,6 @@ int generateArcCapacity(Instance* i);
 
 Solution* SPMD(Solution* sol, Instance* i, int VNFCapacity, int VNFfix);
 
-Solution* SP(Solution* sol, Instance* i, int VNFCapacity, int VNFlb);
+Solution* SP(Instance* i, int VNFCapacity, int VNFlb);
 
 #endif
