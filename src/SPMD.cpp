@@ -15,7 +15,15 @@ int generateArcCapacity(Instance* i){
     return s;
 }
 
-Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
+Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix, int demandToCheck){
+
+    Solution* returnSol;
+
+    int n = instance-> nbNodes;
+    int m = instance-> nbDemands;
+    int arcCapacity = instance->arcCapacity;
+    vector<vector<int>> adjacencyMatrix = instance->adjacencyMatrix;
+
     try{
         cout<<"--> Creating the Gurobi environment"<<endl;
 		GRBEnv env = GRBEnv(true);
@@ -27,11 +35,6 @@ Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
 
         cout<<"--> Creating the variables"<<endl;
         stringstream name;
-
-        int n = instance-> nbNodes;
-        int m = instance-> nbDemands;
-        int arcCapacity = instance->arcCapacity;
-        vector<vector<int>> adjacencyMatrix = instance->adjacencyMatrix;
 
         GRBVar*** x1 = new GRBVar** [n];
         for (int i=0;i<n;i++){
@@ -273,7 +276,7 @@ Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
 
         cout<<"--> optimize"<<endl;
         model.optimize();
-		model.write("model.lp");
+		model.write("SPMDmodel.lp");
 
         int status = model.get(GRB_IntAttr_Status);
 		if (status == GRB_OPTIMAL || (status== GRB_TIME_LIMIT && model.get(GRB_IntAttr_SolCount)>0)){
@@ -284,14 +287,89 @@ Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
 			model.write("solution.sol");
 			cout << "Objective value = "<< model.get(GRB_DoubleAttr_ObjVal)  << endl;
 
+            if (model.get(GRB_DoubleAttr_ObjVal)==m){
+                n = n-1;
+            }
 
-            if (false){
+            //creating the returnSol variables
+
+            vector<bool> openVNF;
+            vector<vector<bool>> useVNFforDemand;
+            vector<vector<vector<bool>>> useEdgeForDemandStart;
+            vector<vector<vector<bool>>> useEdgeForDemandEnd;
+
+            for (int i=0; i<n; i++){
+                vector<bool> tmpUseVNF;
+                vector<vector<bool>> tmpStart;
+                vector<vector<bool>> tmpEnd;
+
+                for (int k=0; k<m; k++){
+                    tmpUseVNF.push_back(false);
+                }
+
+                for (int j=0; j<n; j++){
+                    vector<bool> tmptmpStart;
+                    vector<bool> tmptmpEnd;
+                    for (int k=0; k<m; k++){
+                        tmptmpStart.push_back(false);
+                        tmptmpEnd.push_back(false);
+                    }
+                    tmpStart.push_back(tmptmpStart);
+                    tmpEnd.push_back(tmptmpEnd);
+                }
+                openVNF.push_back(false);
+                useVNFforDemand.push_back(tmpUseVNF);
+                useEdgeForDemandStart.push_back(tmpStart);
+                useEdgeForDemandEnd.push_back(tmpEnd);
+            }
+
+            for (int i=0;i<n;i++){
+                if(y[i].get(GRB_DoubleAttr_X)>0){
+                    openVNF[i] = true;
+                    cout << "y["<<i<<"] is used"<< endl;
+                }else{
+                    openVNF[i] = false;
+                }
+            }
+            for (int k=0;k<m;k++){
                 for (int i=0;i<n;i++){
-                    if(y[i].get(GRB_DoubleAttr_X)>0){
-                        cout << "y["<<i<<"] is used"<< endl;
+                    if(z[i][k].get(GRB_DoubleAttr_X)>0){
+                        useVNFforDemand[i][k] = true;
+                    }else{
+                        useVNFforDemand[i][k] = false;
                     }
                 }
-                for (int k=0;k<m;k++){
+            }
+            for (int k=0;k<m;k++){
+                for (int i=0;i<n;i++){
+                    for (int j=0;j<n;j++){
+                        if(x1[i][j][k].get(GRB_DoubleAttr_X)>0){
+                            if (k==12){
+                            }
+                            useEdgeForDemandStart[i][j][k] = true;
+                        }else{
+                            useEdgeForDemandStart[i][j][k] = false;
+                        }
+                    }
+                }
+            }
+            
+            for (int k=0;k<m;k++){
+                for (int i=0;i<n;i++){
+                    for (int j=0;j<n;j++){
+                        if(x2[i][j][k].get(GRB_DoubleAttr_X)>0){
+                            useEdgeForDemandEnd[i][j][k] = true;
+                        }else{
+                            useEdgeForDemandEnd[i][j][k] = false;
+                        }
+                    }
+                }
+            }
+
+            returnSol = new Solution(openVNF,useVNFforDemand,useEdgeForDemandStart,useEdgeForDemandEnd);
+
+            if (demandToCheck>=0){
+                for (int k=demandToCheck;k<demandToCheck+1;k++){
                     for (int i=0;i<n;i++){
                         if(z[i][k].get(GRB_DoubleAttr_X)>0){
                             cout << "z["<<i<<"][" << k << "] is used where demand start = " << instance->demandsStart[k]
@@ -299,7 +377,8 @@ Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
                         }
                     }
                 }
-                for (int k=35;k<36;k++){
+
+                for (int k=demandToCheck;k<demandToCheck+1;k++){
                     for (int i=0;i<n;i++){
                         for (int j=0;j<n;j++){
                             if(x1[i][j][k].get(GRB_DoubleAttr_X)>0){
@@ -308,7 +387,8 @@ Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
                         }
                     }
                 }
-                for (int k=35;k<36;k++){
+
+                for (int k=demandToCheck;k<demandToCheck+1;k++){
                     for (int i=0;i<n;i++){
                         for (int j=0;j<n;j++){
                             if(x2[i][j][k].get(GRB_DoubleAttr_X)>0){
@@ -326,5 +406,5 @@ Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix){
 
     }
 
-    return sol;
+    return returnSol;
 }

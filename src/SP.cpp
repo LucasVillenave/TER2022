@@ -6,7 +6,7 @@
 #include <climits>
 using namespace std;
 
-Solution* SP(Instance* instance, int VNFCapacity, int VNFlb){
+Solution* SP(Instance* instance, int VNFCapacity, int VNFlb, int demandToCheck, int kOpt, int kf, Solution* kOptSol){
 
     Solution* returnSol;
 
@@ -283,13 +283,56 @@ Solution* SP(Instance* instance, int VNFCapacity, int VNFlb){
         model.addConstr(VNFcount >= VNFlb ,name.str());
         name.str("");
 
-        cout<<"--> setting model"<<endl;
-        model.set(GRB_DoubleParam_TimeLimit, 600.0);
+        switch (kOpt){
+            case 0 :
+                break;
+
+            case 1:
+                cout<<"----> Phase 2 : solution improvment by kopt (24)"<<endl;
+                cout<<"--> kopt-L (25)"<<endl;
+                if (kOptSol==NULL){
+                    cout<<"--> should have been given a solution to improve"<<endl;
+                }else{
+                    GRBLinExpr kOptCtr = 0;
+
+                    int sum = 0;
+
+                    for (int i=0;i<n;i++){
+                        if (kOptSol->openVNF[i]){
+                            kOptCtr -= y[i];
+                            sum ++;
+                        }else{
+                            kOptCtr += y[i];
+                        }
+                    }
+
+                    name << "VNF_kopt";
+                    model.addConstr(kOptCtr <= kf-sum ,name.str());
+                    name.str("");
+                }
+                break;
+
+            case 2 :
+                cout<<"----> Phase 2 : solution improvment by kopt (24)"<<endl;
+                cout<<"--> kopt-LA (25-26)"<<endl;
+
+                cout<<"----> UNDER CONSTRUCTION <----"<<endl;
+
+                break;
+
+            default:
+                break;
+            
+        }
+
+
+        cout<<"----> setting model"<<endl;
+        model.set(GRB_DoubleParam_TimeLimit, 120.0);
 		model.set(GRB_IntParam_Threads,1);
 
-        cout<<"--> optimize"<<endl;
+        cout<<"----> optimize"<<endl;
         model.optimize();
-		model.write("model.lp");
+		model.write("SPmodel.lp");
 
         int status = model.get(GRB_IntAttr_Status);
 		if (status == GRB_OPTIMAL || (status== GRB_TIME_LIMIT && model.get(GRB_IntAttr_SolCount)>0)){
@@ -300,55 +343,52 @@ Solution* SP(Instance* instance, int VNFCapacity, int VNFlb){
 			model.write("solution.sol");
 			cout << "Objective value = "<< model.get(GRB_DoubleAttr_ObjVal)  << endl;
 
-
-            if (true){
-
-                int demandToCheck = 12;
+            for (int i=0;i<n;i++){
+                if(y[i].get(GRB_DoubleAttr_X)>0){
+                    openVNF[i] = true;
+                    cout << "y["<<i<<"] is used"<< endl;
+                }else{
+                    openVNF[i] = false;
+                }
+            }
+            for (int k=0;k<m;k++){
                 for (int i=0;i<n;i++){
-                    if(y[i].get(GRB_DoubleAttr_X)>0){
-                        openVNF[i] = true;
-                        cout << "y["<<i<<"] is used"<< endl;
+                    if(z[i][k].get(GRB_DoubleAttr_X)>0){
+                        useVNFforDemand[i][k] = true;
                     }else{
-                        openVNF[i] = false;
+                        useVNFforDemand[i][k] = false;
                     }
                 }
-                for (int k=0;k<m;k++){
-                    for (int i=0;i<n;i++){
-                        if(z[i][k].get(GRB_DoubleAttr_X)>0){
-                            useVNFforDemand[i][k] = true;
+            }
+            for (int k=0;k<m;k++){
+                for (int i=0;i<n;i++){
+                    for (int j=0;j<n;j++){
+                        if(x1[i][j][k].get(GRB_DoubleAttr_X)>0){
+                            if (k==12){
+                            }
+                            useEdgeForDemandStart[i][j][k] = true;
                         }else{
-                            useVNFforDemand[i][k] = false;
+                            useEdgeForDemandStart[i][j][k] = false;
                         }
                     }
                 }
-                for (int k=0;k<m;k++){
-                    for (int i=0;i<n;i++){
-                        for (int j=0;j<n;j++){
-                            if(x1[i][j][k].get(GRB_DoubleAttr_X)>0){
-                                if (k==12){
-                                }
-                                useEdgeForDemandStart[i][j][k] = true;
-                            }else{
-                                useEdgeForDemandStart[i][j][k] = false;
-                            }
+            }
+            
+            for (int k=0;k<m;k++){
+                for (int i=0;i<n;i++){
+                    for (int j=0;j<n;j++){
+                        if(x2[i][j][k].get(GRB_DoubleAttr_X)>0){
+                            useEdgeForDemandEnd[i][j][k] = true;
+                        }else{
+                            useEdgeForDemandEnd[i][j][k] = false;
                         }
                     }
                 }
-                
-                for (int k=0;k<m;k++){
-                    for (int i=0;i<n;i++){
-                        for (int j=0;j<n;j++){
-                            if(x2[i][j][k].get(GRB_DoubleAttr_X)>0){
-                                useEdgeForDemandEnd[i][j][k] = true;
-                            }else{
-                                useEdgeForDemandEnd[i][j][k] = false;
-                            }
-                        }
-                    }
-                }
-                
-                returnSol = new Solution(openVNF,useVNFforDemand,useEdgeForDemandStart,useEdgeForDemandEnd);
+            }
+            
+            returnSol = new Solution(openVNF,useVNFforDemand,useEdgeForDemandStart,useEdgeForDemandEnd);
 
+            if (demandToCheck>=0){
                 for (int k=demandToCheck;k<demandToCheck+1;k++){
                     for (int i=0;i<n;i++){
                         if(z[i][k].get(GRB_DoubleAttr_X)>0){
@@ -377,7 +417,6 @@ Solution* SP(Instance* instance, int VNFCapacity, int VNFlb){
                         }
                     }
                 }
-
             }
         }
     } catch(GRBException e) {
