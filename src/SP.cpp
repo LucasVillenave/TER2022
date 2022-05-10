@@ -6,10 +6,10 @@
 #include <climits>
 using namespace std;
 
-Solution* SP(Instance* instance, int VNFCapacity, int VNFlb, int demandToCheck, int kOpt, int kf, Solution* kOptSol){
+Solution* SP(Instance* instance, int VNFCapacity, int VNFlb,
+             unsigned long timeout, int demandToCheck, int kOpt, Solution* kOptSol, int kf, int kd){
 
-    Solution* returnSol;
-
+    Solution* returnSol = NULL;
 
     try{
         cout<<"--> Creating the Gurobi environment"<<endl;
@@ -290,8 +290,8 @@ Solution* SP(Instance* instance, int VNFCapacity, int VNFlb, int demandToCheck, 
             case 1:
                 cout<<"----> Phase 2 : solution improvment by kopt (24)"<<endl;
                 cout<<"--> kopt-L (25)"<<endl;
-                if (kOptSol==NULL){
-                    cout<<"--> should have been given a solution to improve"<<endl;
+                if (kOptSol==NULL || kf<0){
+                    cout<<"--> invalid input"<<endl;
                 }else{
                     GRBLinExpr kOptCtr = 0;
 
@@ -315,8 +315,51 @@ Solution* SP(Instance* instance, int VNFCapacity, int VNFlb, int demandToCheck, 
             case 2 :
                 cout<<"----> Phase 2 : solution improvment by kopt (24)"<<endl;
                 cout<<"--> kopt-LA (25-26)"<<endl;
+                cout<<"--> kopt-L (25)"<<endl;
+                if (kOptSol==NULL || kf<0){
+                    cout<<"--> invalid input"<<endl;
+                }else{
+                    GRBLinExpr kOptLCtr = 0;
 
-                cout<<"----> UNDER CONSTRUCTION <----"<<endl;
+                    int sum = 0;
+
+                    for (int i=0;i<n;i++){
+                        if (kOptSol->openVNF[i]){
+                            kOptLCtr -= y[i];
+                            sum ++;
+                        }else{
+                            kOptLCtr += y[i];
+                        }
+                    }
+
+                    name << "VNF_kopt-L";
+                    model.addConstr(kOptLCtr <= kf-sum ,name.str());
+                    name.str("");
+                }
+
+                cout<<"--> kopt-A (26)"<<endl;
+                if (kOptSol==NULL || kd<0){
+                    cout<<"--> invalid input"<<endl;
+                }else{
+                    GRBLinExpr kOptACtr = 0;
+
+                    int sum = 0;
+
+                    for (int i=0;i<n;i++){
+                        for (int k=0; k<m; k++){
+                            if (kOptSol->useVNFforDemand[i][k]==1){
+                                kOptACtr -= z[i][k];
+                                sum ++;
+                            }else{
+                                kOptACtr += z[i][k];
+                            }
+                        }
+                    }
+
+                    name << "VNF_kopt-A";
+                    model.addConstr(kOptACtr <= kd-sum ,name.str());
+                    name.str("");
+                }
 
                 break;
 
@@ -327,92 +370,98 @@ Solution* SP(Instance* instance, int VNFCapacity, int VNFlb, int demandToCheck, 
 
 
         cout<<"----> setting model"<<endl;
-        model.set(GRB_DoubleParam_TimeLimit, 120.0);
-		model.set(GRB_IntParam_Threads,1);
 
-        cout<<"----> optimize"<<endl;
-        model.optimize();
-		model.write("SPmodel.lp");
+        int t = timeout - time(NULL);
+        
+        if (t>0){
 
-        int status = model.get(GRB_IntAttr_Status);
-		if (status == GRB_OPTIMAL || (status== GRB_TIME_LIMIT && model.get(GRB_IntAttr_SolCount)>0)){
-			cout << "Succes! (Status: " << status << ")" << endl;
-			cout << "Runtime : " << model.get(GRB_DoubleAttr_Runtime) << " seconds"<<endl;
+            model.set(GRB_DoubleParam_TimeLimit, t);
+            model.set(GRB_IntParam_Threads,1);
 
-			cout<<"--> Printing results "<<endl;
-			model.write("solution.sol");
-			cout << "Objective value = "<< model.get(GRB_DoubleAttr_ObjVal)  << endl;
+            cout<<"----> optimize"<<endl;
+            model.optimize();
+            model.write("SPmodel.lp");
 
-            for (int i=0;i<n;i++){
-                if(y[i].get(GRB_DoubleAttr_X)>0){
-                    openVNF[i] = true;
-                    cout << "y["<<i<<"] is used"<< endl;
-                }else{
-                    openVNF[i] = false;
-                }
-            }
-            for (int k=0;k<m;k++){
+            int status = model.get(GRB_IntAttr_Status);
+            if (status == GRB_OPTIMAL || (status== GRB_TIME_LIMIT && model.get(GRB_IntAttr_SolCount)>0)){
+                cout << "Succes! (Status: " << status << ")" << endl;
+                cout << "Runtime : " << model.get(GRB_DoubleAttr_Runtime) << " seconds"<<endl;
+
+                cout<<"--> Printing results "<<endl;
+                model.write("solution.sol");
+                cout << "Objective value = "<< model.get(GRB_DoubleAttr_ObjVal)  << endl;
+
                 for (int i=0;i<n;i++){
-                    if(z[i][k].get(GRB_DoubleAttr_X)>0){
-                        useVNFforDemand[i][k] = true;
+                    if(y[i].get(GRB_DoubleAttr_X)>0){
+                        openVNF[i] = true;
+                        cout << "y["<<i<<"] is used"<< endl;
                     }else{
-                        useVNFforDemand[i][k] = false;
+                        openVNF[i] = false;
                     }
                 }
-            }
-            for (int k=0;k<m;k++){
-                for (int i=0;i<n;i++){
-                    for (int j=0;j<n;j++){
-                        if(x1[i][j][k].get(GRB_DoubleAttr_X)>0){
-                            if (k==12){
-                            }
-                            useEdgeForDemandStart[i][j][k] = true;
-                        }else{
-                            useEdgeForDemandStart[i][j][k] = false;
-                        }
-                    }
-                }
-            }
-            
-            for (int k=0;k<m;k++){
-                for (int i=0;i<n;i++){
-                    for (int j=0;j<n;j++){
-                        if(x2[i][j][k].get(GRB_DoubleAttr_X)>0){
-                            useEdgeForDemandEnd[i][j][k] = true;
-                        }else{
-                            useEdgeForDemandEnd[i][j][k] = false;
-                        }
-                    }
-                }
-            }
-            
-            returnSol = new Solution(openVNF,useVNFforDemand,useEdgeForDemandStart,useEdgeForDemandEnd);
-
-            if (demandToCheck>=0){
-                for (int k=demandToCheck;k<demandToCheck+1;k++){
+                for (int k=0;k<m;k++){
                     for (int i=0;i<n;i++){
                         if(z[i][k].get(GRB_DoubleAttr_X)>0){
-                            cout << "z["<<i<<"][" << k << "] is used where demand start = " << instance->demandsStart[k]
-                            << " and demand end = " << instance->demandsEnd[k] << endl;
+                            useVNFforDemand[i][k] = true;
+                        }else{
+                            useVNFforDemand[i][k] = false;
                         }
                     }
                 }
-
-                for (int k=demandToCheck;k<demandToCheck+1;k++){
+                for (int k=0;k<m;k++){
                     for (int i=0;i<n;i++){
                         for (int j=0;j<n;j++){
                             if(x1[i][j][k].get(GRB_DoubleAttr_X)>0){
-                                cout << "x1["<<i<<"][" << j << "][" << k << "] is used"<< endl;
+                                if (k==12){
+                                }
+                                useEdgeForDemandStart[i][j][k] = true;
+                            }else{
+                                useEdgeForDemandStart[i][j][k] = false;
                             }
                         }
                     }
                 }
-
-                for (int k=demandToCheck;k<demandToCheck+1;k++){
+                
+                for (int k=0;k<m;k++){
                     for (int i=0;i<n;i++){
                         for (int j=0;j<n;j++){
                             if(x2[i][j][k].get(GRB_DoubleAttr_X)>0){
-                                cout << "x2["<<i<<"][" << j << "][" << k << "] is used"<< endl;
+                                useEdgeForDemandEnd[i][j][k] = true;
+                            }else{
+                                useEdgeForDemandEnd[i][j][k] = false;
+                            }
+                        }
+                    }
+                }
+                
+                returnSol = new Solution(openVNF,useVNFforDemand,useEdgeForDemandStart,useEdgeForDemandEnd);
+
+                if (demandToCheck>=0){
+                    for (int k=demandToCheck;k<demandToCheck+1;k++){
+                        for (int i=0;i<n;i++){
+                            if(z[i][k].get(GRB_DoubleAttr_X)>0){
+                                cout << "z["<<i<<"][" << k << "] is used where demand start = " << instance->demandsStart[k]
+                                << " and demand end = " << instance->demandsEnd[k] << endl;
+                            }
+                        }
+                    }
+
+                    for (int k=demandToCheck;k<demandToCheck+1;k++){
+                        for (int i=0;i<n;i++){
+                            for (int j=0;j<n;j++){
+                                if(x1[i][j][k].get(GRB_DoubleAttr_X)>0){
+                                    cout << "x1["<<i<<"][" << j << "][" << k << "] is used"<< endl;
+                                }
+                            }
+                        }
+                    }
+
+                    for (int k=demandToCheck;k<demandToCheck+1;k++){
+                        for (int i=0;i<n;i++){
+                            for (int j=0;j<n;j++){
+                                if(x2[i][j][k].get(GRB_DoubleAttr_X)>0){
+                                    cout << "x2["<<i<<"][" << j << "][" << k << "] is used"<< endl;
+                                }
                             }
                         }
                     }

@@ -4,6 +4,7 @@
 #include <string>
 #include <sstream>
 #include <climits>
+#include <ctime>
 using namespace std;
 
 //ToDo
@@ -15,9 +16,9 @@ int generateArcCapacity(Instance* i){
     return s;
 }
 
-Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix, int demandToCheck){
+Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix, unsigned long timeout, int demandToCheck){
 
-    Solution* returnSol;
+    Solution* returnSol = NULL;
 
     int n = instance-> nbNodes;
     int m = instance-> nbDemands;
@@ -271,128 +272,138 @@ Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix, int
         }
 
         cout<<"--> setting model"<<endl;
-        model.set(GRB_DoubleParam_TimeLimit, 600.0);
-		model.set(GRB_IntParam_Threads,1);
 
-        cout<<"--> optimize"<<endl;
-        model.optimize();
-		model.write("SPMDmodel.lp");
+        int t = timeout - time(NULL);
 
-        int status = model.get(GRB_IntAttr_Status);
-		if (status == GRB_OPTIMAL || (status== GRB_TIME_LIMIT && model.get(GRB_IntAttr_SolCount)>0)){
-			cout << "Succes! (Status: " << status << ")" << endl;
-			cout << "Runtime : " << model.get(GRB_DoubleAttr_Runtime) << " seconds"<<endl;
+        // cout << "here we go again : " << timeout << endl;
+        // cout << "here we go again : " << time(NULL) << endl;
+        // cout << "here we go again : " << t << endl;
 
-			cout<<"--> Printing results "<<endl;
-			model.write("solution.sol");
-			cout << "Objective value = "<< model.get(GRB_DoubleAttr_ObjVal)  << endl;
+        if(t>0){
 
-            if (model.get(GRB_DoubleAttr_ObjVal)==m){
-                n = n-1;
-            }
+            model.set(GRB_DoubleParam_TimeLimit, t);
+            model.set(GRB_IntParam_Threads,1);
 
-            //creating the returnSol variables
+            cout<<"--> optimize"<<endl;
+            model.optimize();
+            model.write("SPMDmodel.lp");
 
-            vector<bool> openVNF;
-            vector<vector<bool>> useVNFforDemand;
-            vector<vector<vector<bool>>> useEdgeForDemandStart;
-            vector<vector<vector<bool>>> useEdgeForDemandEnd;
+            int status = model.get(GRB_IntAttr_Status);
+            if (status == GRB_OPTIMAL || (status== GRB_TIME_LIMIT && model.get(GRB_IntAttr_SolCount)>0)){
+                cout << "Succes! (Status: " << status << ")" << endl;
+                cout << "Runtime : " << model.get(GRB_DoubleAttr_Runtime) << " seconds"<<endl;
 
-            for (int i=0; i<n; i++){
-                vector<bool> tmpUseVNF;
-                vector<vector<bool>> tmpStart;
-                vector<vector<bool>> tmpEnd;
+                cout<<"--> Printing results "<<endl;
+                model.write("solution.sol");
+                cout << "Objective value = "<< model.get(GRB_DoubleAttr_ObjVal)  << endl;
 
-                for (int k=0; k<m; k++){
-                    tmpUseVNF.push_back(false);
+                if (model.get(GRB_DoubleAttr_ObjVal)==m){
+                    n = n-1;
                 }
 
-                for (int j=0; j<n; j++){
-                    vector<bool> tmptmpStart;
-                    vector<bool> tmptmpEnd;
+                //creating the returnSol variables
+
+                vector<bool> openVNF;
+                vector<vector<bool>> useVNFforDemand;
+                vector<vector<vector<bool>>> useEdgeForDemandStart;
+                vector<vector<vector<bool>>> useEdgeForDemandEnd;
+
+                for (int i=0; i<n; i++){
+                    vector<bool> tmpUseVNF;
+                    vector<vector<bool>> tmpStart;
+                    vector<vector<bool>> tmpEnd;
+
                     for (int k=0; k<m; k++){
-                        tmptmpStart.push_back(false);
-                        tmptmpEnd.push_back(false);
+                        tmpUseVNF.push_back(false);
                     }
-                    tmpStart.push_back(tmptmpStart);
-                    tmpEnd.push_back(tmptmpEnd);
-                }
-                openVNF.push_back(false);
-                useVNFforDemand.push_back(tmpUseVNF);
-                useEdgeForDemandStart.push_back(tmpStart);
-                useEdgeForDemandEnd.push_back(tmpEnd);
-            }
 
-            for (int i=0;i<n;i++){
-                if(y[i].get(GRB_DoubleAttr_X)>0){
-                    openVNF[i] = true;
-                    cout << "y["<<i<<"] is used"<< endl;
-                }else{
-                    openVNF[i] = false;
+                    for (int j=0; j<n; j++){
+                        vector<bool> tmptmpStart;
+                        vector<bool> tmptmpEnd;
+                        for (int k=0; k<m; k++){
+                            tmptmpStart.push_back(false);
+                            tmptmpEnd.push_back(false);
+                        }
+                        tmpStart.push_back(tmptmpStart);
+                        tmpEnd.push_back(tmptmpEnd);
+                    }
+                    openVNF.push_back(false);
+                    useVNFforDemand.push_back(tmpUseVNF);
+                    useEdgeForDemandStart.push_back(tmpStart);
+                    useEdgeForDemandEnd.push_back(tmpEnd);
                 }
-            }
-            for (int k=0;k<m;k++){
+
                 for (int i=0;i<n;i++){
-                    if(z[i][k].get(GRB_DoubleAttr_X)>0){
-                        useVNFforDemand[i][k] = true;
+                    if(y[i].get(GRB_DoubleAttr_X)>0){
+                        openVNF[i] = true;
+                        cout << "y["<<i<<"] is used"<< endl;
                     }else{
-                        useVNFforDemand[i][k] = false;
+                        openVNF[i] = false;
                     }
                 }
-            }
-            for (int k=0;k<m;k++){
-                for (int i=0;i<n;i++){
-                    for (int j=0;j<n;j++){
-                        if(x1[i][j][k].get(GRB_DoubleAttr_X)>0){
-                            if (k==12){
-                            }
-                            useEdgeForDemandStart[i][j][k] = true;
-                        }else{
-                            useEdgeForDemandStart[i][j][k] = false;
-                        }
-                    }
-                }
-            }
-            
-            for (int k=0;k<m;k++){
-                for (int i=0;i<n;i++){
-                    for (int j=0;j<n;j++){
-                        if(x2[i][j][k].get(GRB_DoubleAttr_X)>0){
-                            useEdgeForDemandEnd[i][j][k] = true;
-                        }else{
-                            useEdgeForDemandEnd[i][j][k] = false;
-                        }
-                    }
-                }
-            }
-
-            returnSol = new Solution(openVNF,useVNFforDemand,useEdgeForDemandStart,useEdgeForDemandEnd);
-
-            if (demandToCheck>=0){
-                for (int k=demandToCheck;k<demandToCheck+1;k++){
+                for (int k=0;k<m;k++){
                     for (int i=0;i<n;i++){
                         if(z[i][k].get(GRB_DoubleAttr_X)>0){
-                            cout << "z["<<i<<"][" << k << "] is used where demand start = " << instance->demandsStart[k]
-                            << " and demand end = " << instance->demandsEnd[k] << endl;
+                            useVNFforDemand[i][k] = true;
+                        }else{
+                            useVNFforDemand[i][k] = false;
                         }
                     }
                 }
-
-                for (int k=demandToCheck;k<demandToCheck+1;k++){
+                for (int k=0;k<m;k++){
                     for (int i=0;i<n;i++){
                         for (int j=0;j<n;j++){
                             if(x1[i][j][k].get(GRB_DoubleAttr_X)>0){
-                                cout << "x1["<<i<<"][" << j << "][" << k << "] is used"<< endl;
+                                if (k==12){
+                                }
+                                useEdgeForDemandStart[i][j][k] = true;
+                            }else{
+                                useEdgeForDemandStart[i][j][k] = false;
+                            }
+                        }
+                    }
+                }
+                
+                for (int k=0;k<m;k++){
+                    for (int i=0;i<n;i++){
+                        for (int j=0;j<n;j++){
+                            if(x2[i][j][k].get(GRB_DoubleAttr_X)>0){
+                                useEdgeForDemandEnd[i][j][k] = true;
+                            }else{
+                                useEdgeForDemandEnd[i][j][k] = false;
                             }
                         }
                     }
                 }
 
-                for (int k=demandToCheck;k<demandToCheck+1;k++){
-                    for (int i=0;i<n;i++){
-                        for (int j=0;j<n;j++){
-                            if(x2[i][j][k].get(GRB_DoubleAttr_X)>0){
-                                cout << "x2["<<i<<"][" << j << "][" << k << "] is used"<< endl;
+                returnSol = new Solution(openVNF,useVNFforDemand,useEdgeForDemandStart,useEdgeForDemandEnd);
+
+                if (demandToCheck>=0){
+                    for (int k=demandToCheck;k<demandToCheck+1;k++){
+                        for (int i=0;i<n;i++){
+                            if(z[i][k].get(GRB_DoubleAttr_X)>0){
+                                cout << "z["<<i<<"][" << k << "] is used where demand start = " << instance->demandsStart[k]
+                                << " and demand end = " << instance->demandsEnd[k] << endl;
+                            }
+                        }
+                    }
+
+                    for (int k=demandToCheck;k<demandToCheck+1;k++){
+                        for (int i=0;i<n;i++){
+                            for (int j=0;j<n;j++){
+                                if(x1[i][j][k].get(GRB_DoubleAttr_X)>0){
+                                    cout << "x1["<<i<<"][" << j << "][" << k << "] is used"<< endl;
+                                }
+                            }
+                        }
+                    }
+
+                    for (int k=demandToCheck;k<demandToCheck+1;k++){
+                        for (int i=0;i<n;i++){
+                            for (int j=0;j<n;j++){
+                                if(x2[i][j][k].get(GRB_DoubleAttr_X)>0){
+                                    cout << "x2["<<i<<"][" << j << "][" << k << "] is used"<< endl;
+                                }
                             }
                         }
                     }
