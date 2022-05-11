@@ -11,9 +11,8 @@ Solution* findFeasableSol(Instance* i, int VNFCapacity, unsigned long timeout,in
                                 i->nbDemands,i->demandsStart,i->demandsEnd,i->demands,
                                 i->arcCapacity,i->serviceCapacity);
     iA->addA();
-    Solution* sol = iA->getTrivialSolution();
 
-    Solution* SPMDSol = SPMD(sol,iA,VNFCapacity,iA->nbNodes,timeout,demandToCheck);
+    Solution* SPMDSol = SPMD(iA,VNFCapacity,iA->nbNodes,timeout,demandToCheck);
     if (SPMDSol==NULL){
         return NULL;
     }
@@ -48,6 +47,38 @@ Solution* AFRL(Instance* instance, int VNFCapacity, int kf, unsigned long timeou
         tmpVal = spSol->getValue();
 
         tmpSol = SP(instance,VNFCapacity,0,timeout,demandToCheck,1,spSol,kf);
+        if(tmpSol==NULL){
+            return spSol;
+        }else{
+            spSol = tmpSol;
+        }
+    }
+
+    return spSol;
+}
+
+Solution* AFRA(Instance* instance, int VNFCapacity, int kd, unsigned long timeout,int demandToCheck){
+
+    Solution* sol = findFeasableSol(instance,VNFCapacity, timeout);
+
+    if (sol==NULL || (instance->check(sol,VNFCapacity)!=1) ){
+        return NULL;
+    }
+
+    std::cout <<std::endl << "solution found, ameliorating" <<std::endl <<std::endl;
+
+    int tmpVal = sol->getValue();
+    Solution* spSol = SP(instance,VNFCapacity,0,timeout,demandToCheck,3,sol,-1,kd);
+    if (spSol==NULL){
+        return sol;
+    }
+    Solution* tmpSol;
+
+    while(tmpVal>spSol->getValue()){
+
+        tmpVal = spSol->getValue();
+
+        tmpSol = SP(instance,VNFCapacity,0,timeout,demandToCheck,3,spSol,-1,kd);
         if(tmpSol==NULL){
             return spSol;
         }else{

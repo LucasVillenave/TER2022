@@ -1,3 +1,4 @@
+nbNodes nbEdges nbDemands lvnf mvnf hvnf u
 27 51 702 397 2872 5348
 
 0 1

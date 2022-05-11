@@ -363,6 +363,35 @@ Solution* SP(Instance* instance, int VNFCapacity, int VNFlb,
 
                 break;
 
+
+            case 3 :
+                cout<<"----> Phase 2 : solution improvment by kopt (24)"<<endl;
+                cout<<"--> kopt-A (26)"<<endl;
+                if (kOptSol==NULL || kd<0){
+                    cout<<"--> invalid input"<<endl;
+                }else{
+                    GRBLinExpr kOptACtr = 0;
+
+                    int sum = 0;
+
+                    for (int i=0;i<n;i++){
+                        for (int k=0; k<m; k++){
+                            if (kOptSol->useVNFforDemand[i][k]==1){
+                                kOptACtr -= z[i][k];
+                                sum ++;
+                            }else{
+                                kOptACtr += z[i][k];
+                            }
+                        }
+                    }
+
+                    name << "VNF_kopt-A";
+                    model.addConstr(kOptACtr <= kd-sum ,name.str());
+                    name.str("");
+                }
+
+                break;
+
             default:
                 break;
             
@@ -372,7 +401,7 @@ Solution* SP(Instance* instance, int VNFCapacity, int VNFlb,
         cout<<"----> setting model"<<endl;
 
         int t = timeout - time(NULL);
-        
+
         if (t>0){
 
             model.set(GRB_DoubleParam_TimeLimit, t);

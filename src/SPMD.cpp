@@ -7,7 +7,7 @@
 #include <ctime>
 using namespace std;
 
-//ToDo
+//Never had the time, so it is equal to highVNF at the parsing
 int generateArcCapacity(Instance* i){
     int s = 0;
     for (int d:i->demands){
@@ -16,7 +16,7 @@ int generateArcCapacity(Instance* i){
     return s;
 }
 
-Solution* SPMD(Solution* sol,Instance* instance,int VNFCapacity, int VNFfix, unsigned long timeout, int demandToCheck){
+Solution* SPMD(Instance* instance,int VNFCapacity, int VNFfix, unsigned long timeout, int demandToCheck){
 
     Solution* returnSol = NULL;
 
